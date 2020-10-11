@@ -2,6 +2,7 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+// WIP
 contract GigsRegistry {
     event GigCreated(address _creator, bytes32 _gigIPFSHash);
     event GigCompleted(
