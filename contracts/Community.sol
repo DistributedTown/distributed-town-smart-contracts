@@ -10,10 +10,26 @@ import "./IAtoken.sol";
 
 import "./DITOToken.sol";
 
+/**
+ * @title DistributedTown Community
+ *
+ * @dev Implementation of the Community concept in the scope of the DistributedTown project
+ * @author DistributedTown
+ */
 contract Community is Ownable {
-    event MemberAdded(address _member, uint256 _transferedTokens);
+    /**
+     * @dev emitted when a member is added
+     * @param _member the user which just joined the community
+     * @param _transferredToken the amount of transferred dito tokens on join
+     **/
+    event MemberAdded(address _member, uint256 _transferredTokens);
+    /**
+     * @dev emitted when a member leaves the community
+     * @param _member the user which just left the community
+     **/
     event MemberRemoved(address _member);
 
+    // The address of the DITOToken ERC20 contract instantiated on Community creation
     DITOToken public tokens;
 
     mapping(address => bool) public enabledMembers;
@@ -23,6 +39,10 @@ contract Community is Ownable {
         tokens = new DITOToken(96000 * 1e18);
     }
 
+    /**
+     * @dev makes the calling user join the community if required conditions are met
+     * @param _amountOfDITOToRedeem the amount of dito tokens for which this user is eligible
+     **/
     function join(uint256 _amountOfDITOToRedeem) public {
         require(numberOfMembers < 24, "There are already 24 members, sorry!");
         require(enabledMembers[msg.sender] == false, "You already joined!");
@@ -35,6 +55,9 @@ contract Community is Ownable {
         emit MemberAdded(msg.sender, _amountOfDITOToRedeem);
     }
 
+    /**
+     * @dev makes the calling user leave the community if required conditions are met
+     **/
     function leave() public {
         require(enabledMembers[msg.sender] == true, "You didn't even join!");
 
@@ -52,6 +75,10 @@ contract Community is Ownable {
         emit MemberRemoved(msg.sender);
     }
 
+    /**
+     * @dev makes the calling user deposit funds (DAI) in the community if required conditions are met
+     * @param _amount number of DAI which the user wants to deposit
+     **/
     function deposit(uint256 _amount) public {
         require(
             enabledMembers[msg.sender] == true,
@@ -75,6 +102,10 @@ contract Community is Ownable {
         dai.transferFrom(msg.sender, address(this), amount);
     }
 
+    /**
+     * @dev makes the calling user lend funds (DAI) that are in the community contract into Aave if required conditions are met
+     * @param _amount number of DAI which the user wants to lend
+     **/
     function invest(uint256 _amount) public {
         require(
             enabledMembers[msg.sender] == true,
@@ -108,6 +139,10 @@ contract Community is Ownable {
         lendingPool.deposit(daiAddress, _amount * 1e18, referral);
     }
 
+    /**
+     * @dev makes the calling user withdraw funds (aDAI) that are in Aave back into the community contract if required conditions are met
+     * @param _amount number of DAI which the user wants to withdraw
+     **/
     function withdrawFromInvestment(uint256 _amount) public {
         require(
             enabledMembers[msg.sender] == true,
@@ -129,6 +164,10 @@ contract Community is Ownable {
         aDai.redeem(_amount * 1e18);
     }
 
+    /**
+     * @dev Returns the amount of aDAI held by the contract (invested + interest)
+     * @return the aDai balance of the contract
+     **/
     function getInvestedBalance()
         public
         view
