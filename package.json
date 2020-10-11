@@ -1,0 +1,24 @@
+{
+  "name": "disstributed-town-smart-contracts",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "connect": "truffle console --network"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^2.5.1",
+    "@truffle/hdwallet-provider": "^1.1.0",
+    "truffle": "^5.1.46",
+    "truffle-privatekey-provider": "^1.5.0"
+  },
+  "devDependencies": {
+    "dotenv": "^8.2.0"
+  },
+  "description": ""
+}
