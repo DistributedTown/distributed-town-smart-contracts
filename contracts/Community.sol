@@ -20,7 +20,7 @@ contract Community is Ownable {
     /**
      * @dev emitted when a member is added
      * @param _member the user which just joined the community
-     * @param _transferredToken the amount of transferred dito tokens on join
+     * @param _transferredTokens the amount of transferred dito tokens on join
      **/
     event MemberAdded(address _member, uint256 _transferredTokens);
     /**
@@ -168,17 +168,35 @@ contract Community is Ownable {
      * @dev Returns the amount of aDAI held by the contract (invested + interest)
      * @return the aDai balance of the contract
      **/
-    function getInvestedBalance()
+    function getInvestedBalanceInfo()
         public
         view
-        returns (uint256 investedBalance)
+        returns (uint256 investedBalance, uint256 investedTokenAPY)
     {
         address aDaiAddress = address(
             0xcB1Fe6F440c49E9290c3eb7f158534c2dC374201
         ); // Ropsten aDAI
 
         // Client has to convert to balanceOf / 1e18
-        return IAtoken(aDaiAddress).balanceOf(address(this));
+        uint256 _investedBalance = IAtoken(aDaiAddress).balanceOf(
+            address(this)
+        );
+
+        address daiAddress = address(
+            0xf80A32A835F79D7787E8a8ee5721D0fEaFd78108
+        ); // Ropsten DAI
+
+        // Retrieve LendingPool address
+        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
+            address(0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728)
+        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
+        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
+
+        // Client has to convert to balanceOf / 1e27
+        (, , , , uint256 liquidityRate, , , , , , , , ) = lendingPool
+            .getReserveData(daiAddress);
+
+        return (_investedBalance, liquidityRate);
     }
 
     function() external payable {}
