@@ -1,19 +1,21 @@
-pragma solidity ^0.5.0;
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.6.10;
 
 /**
 @title ILendingPool interface
 @notice provides the interface to fetch the LendingPool address
  */
 
-contract ILendingPool {
+abstract contract ILendingPool {
     function deposit(
         address,
         uint256,
         uint16
-    ) external payable;
+    ) external virtual payable;
 
     function getReserveData(address _reserve)
         external
+        virtual
         view
         returns (
             uint256 totalLiquidity,

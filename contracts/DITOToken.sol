@@ -1,8 +1,8 @@
-pragma solidity ^0.5.0;
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title DiTo ERC20 AToken
@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
  * @dev Implementation of the SkillWallet token for the DistributedTown project.
  * @author DistributedTown
  */
-contract DITOToken is ERC20, ERC20Detailed, Ownable {
+contract DITOToken is ERC20, Ownable {
     event AddedToWhitelist(address _communityMember);
 
     mapping(address => bool) public whitelist;
@@ -20,10 +20,7 @@ contract DITOToken is ERC20, ERC20Detailed, Ownable {
         _;
     }
 
-    constructor(uint256 initialSupply)
-        public
-        ERC20Detailed("DiTo", "DITO", 18)
-    {
+    constructor(uint256 initialSupply) public ERC20("DiTo", "DITO") {
         whitelist[msg.sender] = true;
         _mint(msg.sender, initialSupply);
     }
@@ -36,6 +33,7 @@ contract DITOToken is ERC20, ERC20Detailed, Ownable {
 
     function transfer(address recipient, uint256 amount)
         public
+        override
         onlyInWhitelist
         returns (bool)
     {
@@ -44,6 +42,7 @@ contract DITOToken is ERC20, ERC20Detailed, Ownable {
 
     function approve(address spender, uint256 amount)
         public
+        override
         onlyInWhitelist
         returns (bool)
     {
@@ -54,12 +53,13 @@ contract DITOToken is ERC20, ERC20Detailed, Ownable {
         address sender,
         address recipient,
         uint256 amount
-    ) public onlyInWhitelist returns (bool) {
+    ) public override onlyInWhitelist returns (bool) {
         return super.transferFrom(sender, recipient, amount);
     }
 
     function increaseAllowance(address spender, uint256 addedValue)
         public
+        override
         onlyInWhitelist
         returns (bool)
     {
@@ -68,6 +68,7 @@ contract DITOToken is ERC20, ERC20Detailed, Ownable {
 
     function decreaseAllowance(address spender, uint256 subtractedValue)
         public
+        override
         onlyInWhitelist
         returns (bool)
     {

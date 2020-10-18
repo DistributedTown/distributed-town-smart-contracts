@@ -18,7 +18,7 @@
  *
  */
 
-require('dotenv').config()
+require("dotenv").config();
 
 const PrivateKeyProvider = require("truffle-privatekey-provider");
 const HDWalletProvider = require("@truffle/hdwallet-provider");
@@ -49,13 +49,13 @@ module.exports = {
           providerOrUrl: `https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
           addressIndex: 0,
         }),
-      network_id: '3',
-    }
+      network_id: "3",
+    },
   },
   // Configure your compilers
   compilers: {
     solc: {
-      version: "^0.5.0",
+      version: "^0.6.10",
       evmVersion: "byzantium",
     },
   },

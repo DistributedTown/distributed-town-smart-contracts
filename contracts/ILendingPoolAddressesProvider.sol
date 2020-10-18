@@ -1,53 +1,65 @@
-pragma solidity ^0.5.0;
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.6.10;
 
 /**
 @title ILendingPoolAddressesProvider interface
 @notice provides the interface to fetch the LendingPoolCore address
  */
 
-contract ILendingPoolAddressesProvider {
-    function getLendingPool() public view returns (address);
+abstract contract ILendingPoolAddressesProvider {
+    function getLendingPool() public virtual view returns (address);
 
-    function setLendingPoolImpl(address _pool) public;
+    function setLendingPoolImpl(address _pool) public virtual;
 
-    function getLendingPoolCore() public view returns (address payable);
+    function getLendingPoolCore() public virtual view returns (address payable);
 
-    function setLendingPoolCoreImpl(address _lendingPoolCore) public;
+    function setLendingPoolCoreImpl(address _lendingPoolCore) public virtual;
 
-    function getLendingPoolConfigurator() public view returns (address);
+    function getLendingPoolConfigurator() public virtual view returns (address);
 
-    function setLendingPoolConfiguratorImpl(address _configurator) public;
+    function setLendingPoolConfiguratorImpl(address _configurator)
+        public
+        virtual;
 
-    function getLendingPoolDataProvider() public view returns (address);
+    function getLendingPoolDataProvider() public virtual view returns (address);
 
-    function setLendingPoolDataProviderImpl(address _provider) public;
+    function setLendingPoolDataProviderImpl(address _provider) public virtual;
 
-    function getLendingPoolParametersProvider() public view returns (address);
+    function getLendingPoolParametersProvider()
+        public
+        virtual
+        view
+        returns (address);
 
     function setLendingPoolParametersProviderImpl(address _parametersProvider)
-        public;
+        public
+        virtual;
 
-    function getTokenDistributor() public view returns (address);
+    function getTokenDistributor() public virtual view returns (address);
 
-    function setTokenDistributor(address _tokenDistributor) public;
+    function setTokenDistributor(address _tokenDistributor) public virtual;
 
-    function getFeeProvider() public view returns (address);
+    function getFeeProvider() public virtual view returns (address);
 
-    function setFeeProviderImpl(address _feeProvider) public;
+    function setFeeProviderImpl(address _feeProvider) public virtual;
 
-    function getLendingPoolLiquidationManager() public view returns (address);
+    function getLendingPoolLiquidationManager()
+        public
+        virtual
+        view
+        returns (address);
 
-    function setLendingPoolLiquidationManager(address _manager) public;
+    function setLendingPoolLiquidationManager(address _manager) public virtual;
 
-    function getLendingPoolManager() public view returns (address);
+    function getLendingPoolManager() public virtual view returns (address);
 
-    function setLendingPoolManager(address _lendingPoolManager) public;
+    function setLendingPoolManager(address _lendingPoolManager) public virtual;
 
-    function getPriceOracle() public view returns (address);
+    function getPriceOracle() public virtual view returns (address);
 
-    function setPriceOracle(address _priceOracle) public;
+    function setPriceOracle(address _priceOracle) public virtual;
 
-    function getLendingRateOracle() public view returns (address);
+    function getLendingRateOracle() public virtual view returns (address);
 
-    function setLendingRateOracle(address _lendingRateOracle) public;
+    function setLendingRateOracle(address _lendingRateOracle) public virtual;
 }
