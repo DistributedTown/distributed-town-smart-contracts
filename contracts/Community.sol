@@ -10,6 +10,7 @@ import "@opengsn/gsn/contracts/BaseRelayRecipient.sol";
 import "./ILendingPoolAddressesProvider.sol";
 import "./ILendingPool.sol";
 import "./IAtoken.sol";
+import "./IFiatTokenV2.sol";
 
 import "./DITOToken.sol";
 
@@ -22,7 +23,7 @@ import "./WadRayMath.sol";
  * @author DistributedTown
  */
 contract Community is BaseRelayRecipient {
-	string public override versionRecipient = "2.0.0";
+    string public override versionRecipient = "2.0.0";
 
     using SafeMath for uint256;
     using WadRayMath for uint256;
@@ -60,7 +61,7 @@ contract Community is BaseRelayRecipient {
     // you are using from
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor(address _forwarer) public {
+    constructor(address _forwarder) public {
         trustedForwarder = _forwarder;
 
         tokens = new DITOToken(96000 * 1e18);
@@ -72,7 +73,7 @@ contract Community is BaseRelayRecipient {
             0xf80A32A835F79D7787E8a8ee5721D0fEaFd78108
         );
         depositableCurrenciesContracts["USDC"] = address(
-            0x07865c6E87B9F70255377e024ace6630C1Eaa37F 
+            0x07865c6E87B9F70255377e024ace6630C1Eaa37F
         );
 
         depositableACurrenciesContracts["DAI"] = address(
@@ -124,10 +125,11 @@ contract Community is BaseRelayRecipient {
      * @dev makes the calling user deposit funds in the community if required conditions are met
      * @param _amount number of DAI which the user wants to deposit
      **/
-    function deposit(uint256 _amount, string memory _currency, bytes32 _nonce, uint8 _v, bytes32 _r, bytes32 _s)
-        public
-        onlyEnabledCurrency(_currency)
-    {
+    function deposit(
+        uint256 _amount,
+        string memory _currency,
+        bytes memory _optionalSignatureInfo
+    ) public onlyEnabledCurrency(_currency) {
         require(
             enabledMembers[_msgSender()] == true,
             "You can't deposit if you're not part of the community!"
@@ -137,26 +139,40 @@ contract Community is BaseRelayRecipient {
             depositableCurrenciesContracts[_currency]
         );
         IERC20 currency = IERC20(currencyAddress);
-
-        // Transfer DAI
         require(
             currency.balanceOf(_msgSender()) <= _amount * 1e18,
             "You don't have enough funds to invest."
         );
 
-        if(_currency == "DAI") {
-            uint256 amount = _amount * 1e18;
+        bytes32 currencyStringHash = keccak256(bytes(_currency));
+        uint256 amount = _amount * 1e18;
 
-            // Transfer currency
+        if (currencyStringHash == keccak256(bytes("DAI"))) {
             currency.transferFrom(_msgSender(), address(this), amount);
-        } else if (currency == "USDC") {
-            uint256 amount = _amount * 1e6;
+        } else if (currencyStringHash == keccak256(bytes("USDC"))) {
+            (bytes32 _nonce, uint8 _v, bytes32 _r, bytes32 _s) = abi.decode(
+                _optionalSignatureInfo,
+                (bytes32, uint8, bytes32, bytes32)
+            );
 
-            const validBefore = block.timestamp + 3600; // Valid for an hour
-            const validAfter = 0;
+            amount = _amount * 1e6;
 
-            // Transfer currency
-            currency.transferWithAuthorization(_msgSender(), address(this), amount, validAfter, validBefore, nonce, v, r, s);
+            uint256 validBefore = block.timestamp + 3600; // Valid for an hour
+            uint256 validAfter = 0;
+
+            IFiatTokenV2 usdcv2 = IFiatTokenV2(currencyAddress);
+
+            usdcv2.transferWithAuthorization(
+                _msgSender(),
+                address(this),
+                amount,
+                validAfter,
+                validBefore,
+                _nonce,
+                _v,
+                _r,
+                _s
+            );
         }
     }
 
@@ -172,7 +188,10 @@ contract Community is BaseRelayRecipient {
             enabledMembers[_msgSender()] == true,
             "You can't invest if you're not part of the community!"
         );
-        require(_currency != "USDC", "Gasless USDC is not implemented in Aave yet")
+        require(
+            keccak256(bytes(_currency)) != keccak256(bytes("USDC")),
+            "Gasless USDC is not implemented in Aave yet"
+        );
 
         address currencyAddress = address(
             depositableCurrenciesContracts[_currency]
@@ -213,7 +232,10 @@ contract Community is BaseRelayRecipient {
             enabledMembers[_msgSender()] == true,
             "You can't withdraw investment if you're not part of the community!"
         );
-        require(_currency != "USDC", "Gasless USDC is not implemented in Aave yet")
+        require(
+            keccak256(bytes(_currency)) != keccak256(bytes("USDC")),
+            "Gasless USDC is not implemented in Aave yet"
+        );
 
         // Retrieve aCurrencyAddress
         address aCurrencyAddress = address(

@@ -29,6 +29,11 @@ const mnemonicPhrase = process.env.MNEMONIC; // 12 word mnemonic
 
 module.exports = {
   networks: {
+    ganachecli: {
+      host: "127.0.0.1",
+      port: 8545,
+      network_id: 5777,
+    },
     regtest: {
       provider: new PrivateKeyProvider(privateKey, "http://127.0.0.1:4444"),
       host: "127.0.0.1",
