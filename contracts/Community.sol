@@ -21,7 +21,9 @@ import "./WadRayMath.sol";
  * @dev Implementation of the Community concept in the scope of the DistributedTown project
  * @author DistributedTown
  */
-contract Community {
+contract Community is BaseRelayRecipient {
+	string public override versionRecipient = "2.0.0";
+
     using SafeMath for uint256;
     using WadRayMath for uint256;
 
@@ -58,7 +60,9 @@ contract Community {
     // you are using from
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor() public {
+    constructor(address _forwarer) public {
+        trustedForwarder = _forwarder;
+
         tokens = new DITOToken(96000 * 1e18);
 
         depositableCurrencies.push("DAI");
@@ -86,34 +90,34 @@ contract Community {
      **/
     function join(uint256 _amountOfDITOToRedeem) public {
         require(numberOfMembers < 24, "There are already 24 members, sorry!");
-        require(enabledMembers[msg.sender] == false, "You already joined!");
+        require(enabledMembers[_msgSender()] == false, "You already joined!");
 
-        enabledMembers[msg.sender] = true;
+        enabledMembers[_msgSender()] = true;
         numberOfMembers = numberOfMembers + 1;
 
-        tokens.transfer(msg.sender, _amountOfDITOToRedeem * 1e18);
+        tokens.transfer(_msgSender(), _amountOfDITOToRedeem * 1e18);
 
-        emit MemberAdded(msg.sender, _amountOfDITOToRedeem);
+        emit MemberAdded(_msgSender(), _amountOfDITOToRedeem);
     }
 
     /**
      * @dev makes the calling user leave the community if required conditions are met
      **/
     function leave() public {
-        require(enabledMembers[msg.sender] == true, "You didn't even join!");
+        require(enabledMembers[_msgSender()] == true, "You didn't even join!");
 
-        enabledMembers[msg.sender] = false;
+        enabledMembers[_msgSender()] = false;
         numberOfMembers = numberOfMembers - 1;
 
         // leaving user must first give allowance
         // then can call this
         tokens.transferFrom(
-            msg.sender,
+            _msgSender(),
             address(this),
-            tokens.balanceOf(msg.sender)
+            tokens.balanceOf(_msgSender())
         );
 
-        emit MemberRemoved(msg.sender);
+        emit MemberRemoved(_msgSender());
     }
 
     /**
@@ -125,7 +129,7 @@ contract Community {
         onlyEnabledCurrency(_currency)
     {
         require(
-            enabledMembers[msg.sender] == true,
+            enabledMembers[_msgSender()] == true,
             "You can't deposit if you're not part of the community!"
         );
 
@@ -136,7 +140,7 @@ contract Community {
 
         // Transfer DAI
         require(
-            currency.balanceOf(msg.sender) <= _amount * 1e18,
+            currency.balanceOf(_msgSender()) <= _amount * 1e18,
             "You don't have enough funds to invest."
         );
 
@@ -144,7 +148,7 @@ contract Community {
             uint256 amount = _amount * 1e18;
 
             // Transfer currency
-            currency.transferFrom(msg.sender, address(this), amount);
+            currency.transferFrom(_msgSender(), address(this), amount);
         } else if (currency == "USDC") {
             uint256 amount = _amount * 1e6;
 
@@ -152,7 +156,7 @@ contract Community {
             const validAfter = 0;
 
             // Transfer currency
-            currency.transferWithAuthorization(msg.sender, address(this), amount, validAfter, validBefore, nonce, v, r, s);
+            currency.transferWithAuthorization(_msgSender(), address(this), amount, validAfter, validBefore, nonce, v, r, s);
         }
     }
 
@@ -165,7 +169,7 @@ contract Community {
         onlyEnabledCurrency(_currency)
     {
         require(
-            enabledMembers[msg.sender] == true,
+            enabledMembers[_msgSender()] == true,
             "You can't invest if you're not part of the community!"
         );
         require(_currency != "USDC", "Gasless USDC is not implemented in Aave yet")
@@ -206,7 +210,7 @@ contract Community {
         onlyEnabledCurrency(_currency)
     {
         require(
-            enabledMembers[msg.sender] == true,
+            enabledMembers[_msgSender()] == true,
             "You can't withdraw investment if you're not part of the community!"
         );
         require(_currency != "USDC", "Gasless USDC is not implemented in Aave yet")
