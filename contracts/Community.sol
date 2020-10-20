@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "@opengsn/gsn/contracts/BaseRelayRecipient.sol";
-import "@opengsn/gsn/contracts/interfaces/IKnowForwarderAddress.sol";
 
 import "./ILendingPoolAddressesProvider.sol";
 import "./ILendingPool.sol";
@@ -22,9 +21,7 @@ import "./WadRayMath.sol";
  * @dev Implementation of the Community concept in the scope of the DistributedTown project
  * @author DistributedTown
  */
-contract Community is Ownable, BaseRelayRecipient, IKnowForwarderAddress {
-    string public override versionRecipient = "2.0.0";
-
+contract Community {
     using SafeMath for uint256;
     using WadRayMath for uint256;
 
@@ -61,9 +58,7 @@ contract Community is Ownable, BaseRelayRecipient, IKnowForwarderAddress {
     // you are using from
     // https://docs.opengsn.org/gsn-provider/networks.html
     // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor(address _forwarder) public {
-        trustedForwarder = _forwarder;
-
+    constructor() public {
         tokens = new DITOToken(96000 * 1e18);
 
         depositableCurrencies.push("DAI");
@@ -73,20 +68,16 @@ contract Community is Ownable, BaseRelayRecipient, IKnowForwarderAddress {
             0xf80A32A835F79D7787E8a8ee5721D0fEaFd78108
         );
         depositableCurrenciesContracts["USDC"] = address(
-            0x851dEf71f0e6A903375C1e536Bd9ff1684BAD802
+            0x07865c6E87B9F70255377e024ace6630C1Eaa37F 
         );
 
         depositableACurrenciesContracts["DAI"] = address(
             0xcB1Fe6F440c49E9290c3eb7f158534c2dC374201
         );
-        depositableACurrenciesContracts["USDC"] = address(
-            0x2dB6a31f973Ec26F5e17895f0741BB5965d5Ae15
-        );
-    }
-
-    // Needed by GSN
-    function getTrustedForwarder() public override view returns (address) {
-        return trustedForwarder;
+        // Aave on Ropsten doesn't implement it yet, pending
+        // depositableACurrenciesContracts["USDC"] = address(
+        //     0x2dB6a31f973Ec26F5e17895f0741BB5965d5Ae15
+        // );
     }
 
     /**
@@ -95,46 +86,46 @@ contract Community is Ownable, BaseRelayRecipient, IKnowForwarderAddress {
      **/
     function join(uint256 _amountOfDITOToRedeem) public {
         require(numberOfMembers < 24, "There are already 24 members, sorry!");
-        require(enabledMembers[_msgSender()] == false, "You already joined!");
+        require(enabledMembers[msg.sender] == false, "You already joined!");
 
-        enabledMembers[_msgSender()] = true;
+        enabledMembers[msg.sender] = true;
         numberOfMembers = numberOfMembers + 1;
 
-        tokens.transfer(_msgSender(), _amountOfDITOToRedeem * 1e18);
+        tokens.transfer(msg.sender, _amountOfDITOToRedeem * 1e18);
 
-        emit MemberAdded(_msgSender(), _amountOfDITOToRedeem);
+        emit MemberAdded(msg.sender, _amountOfDITOToRedeem);
     }
 
     /**
      * @dev makes the calling user leave the community if required conditions are met
      **/
     function leave() public {
-        require(enabledMembers[_msgSender()] == true, "You didn't even join!");
+        require(enabledMembers[msg.sender] == true, "You didn't even join!");
 
-        enabledMembers[_msgSender()] = false;
+        enabledMembers[msg.sender] = false;
         numberOfMembers = numberOfMembers - 1;
 
         // leaving user must first give allowance
         // then can call this
         tokens.transferFrom(
-            _msgSender(),
+            msg.sender,
             address(this),
-            tokens.balanceOf(_msgSender())
+            tokens.balanceOf(msg.sender)
         );
 
-        emit MemberRemoved(_msgSender());
+        emit MemberRemoved(msg.sender);
     }
 
     /**
      * @dev makes the calling user deposit funds in the community if required conditions are met
      * @param _amount number of DAI which the user wants to deposit
      **/
-    function deposit(uint256 _amount, string memory _currency)
+    function deposit(uint256 _amount, string memory _currency, bytes32 _nonce, uint8 _v, bytes32 _r, bytes32 _s)
         public
         onlyEnabledCurrency(_currency)
     {
         require(
-            enabledMembers[_msgSender()] == true,
+            enabledMembers[msg.sender] == true,
             "You can't deposit if you're not part of the community!"
         );
 
@@ -145,14 +136,24 @@ contract Community is Ownable, BaseRelayRecipient, IKnowForwarderAddress {
 
         // Transfer DAI
         require(
-            currency.balanceOf(_msgSender()) <= _amount * 1e18,
+            currency.balanceOf(msg.sender) <= _amount * 1e18,
             "You don't have enough funds to invest."
         );
 
-        uint256 amount = _amount * 1e18;
+        if(_currency == "DAI") {
+            uint256 amount = _amount * 1e18;
 
-        // Transfer currency
-        currency.transferFrom(_msgSender(), address(this), amount);
+            // Transfer currency
+            currency.transferFrom(msg.sender, address(this), amount);
+        } else if (currency == "USDC") {
+            uint256 amount = _amount * 1e6;
+
+            const validBefore = block.timestamp + 3600; // Valid for an hour
+            const validAfter = 0;
+
+            // Transfer currency
+            currency.transferWithAuthorization(msg.sender, address(this), amount, validAfter, validBefore, nonce, v, r, s);
+        }
     }
 
     /**
@@ -164,9 +165,10 @@ contract Community is Ownable, BaseRelayRecipient, IKnowForwarderAddress {
         onlyEnabledCurrency(_currency)
     {
         require(
-            enabledMembers[_msgSender()] == true,
+            enabledMembers[msg.sender] == true,
             "You can't invest if you're not part of the community!"
         );
+        require(_currency != "USDC", "Gasless USDC is not implemented in Aave yet")
 
         address currencyAddress = address(
             depositableCurrenciesContracts[_currency]
@@ -204,14 +206,15 @@ contract Community is Ownable, BaseRelayRecipient, IKnowForwarderAddress {
         onlyEnabledCurrency(_currency)
     {
         require(
-            enabledMembers[_msgSender()] == true,
+            enabledMembers[msg.sender] == true,
             "You can't withdraw investment if you're not part of the community!"
         );
+        require(_currency != "USDC", "Gasless USDC is not implemented in Aave yet")
 
         // Retrieve aCurrencyAddress
         address aCurrencyAddress = address(
             depositableACurrenciesContracts[_currency]
-        ); //
+        );
         IAtoken aCurrency = IAtoken(aCurrencyAddress);
 
         if (aCurrency.isTransferAllowed(address(this), _amount * 1e18) == false)
@@ -234,16 +237,16 @@ contract Community is Ownable, BaseRelayRecipient, IKnowForwarderAddress {
         returns (uint256 investedBalance, uint256 investedTokenAPY)
     {
         address aDaiAddress = address(depositableACurrenciesContracts["DAI"]); // Ropsten aDAI
-        address aUsdcAddress = address(depositableACurrenciesContracts["USDC"]); // Ropsten aUSDC
+        // address aUsdcAddress = address(depositableACurrenciesContracts["USDC"]); // Ropsten aUSDC
 
         // Client has to convert to balanceOf / 1e18
         uint256 _investedBalance = IAtoken(aDaiAddress).balanceOf(
             address(this)
         );
-        _investedBalance += IAtoken(aUsdcAddress).balanceOf(address(this));
+        // _investedBalance += IAtoken(aUsdcAddress).balanceOf(address(this));
 
         address daiAddress = address(depositableCurrenciesContracts["DAI"]);
-        address usdcAddress = address(depositableCurrenciesContracts["USDC"]);
+        // address usdcAddress = address(depositableCurrenciesContracts["USDC"]);
 
         // Retrieve LendingPool address
         ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
@@ -254,14 +257,14 @@ contract Community is Ownable, BaseRelayRecipient, IKnowForwarderAddress {
         // Client has to convert to balanceOf / 1e27
         (, , , , uint256 daiLiquidityRate, , , , , , , , ) = lendingPool
             .getReserveData(daiAddress);
-        (, , , , uint256 usdcLiquidityRate, , , , , , , , ) = lendingPool
-            .getReserveData(usdcAddress);
+        // (, , , , uint256 usdcLiquidityRate, , , , , , , , ) = lendingPool
+        //     .getReserveData(usdcAddress);
 
-        uint256 liquidityRate = daiLiquidityRate.add(usdcLiquidityRate).rayDiv(
-            2
-        );
+        // uint256 liquidityRate = daiLiquidityRate.add(usdcLiquidityRate).rayDiv(
+        //     2
+        // );
 
-        return (_investedBalance, liquidityRate);
+        return (_investedBalance, daiLiquidityRate);
     }
 
     fallback() external payable {}
