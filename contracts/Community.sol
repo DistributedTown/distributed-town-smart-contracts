@@ -289,6 +289,4 @@ contract Community is BaseRelayRecipient {
         // Redeems _amount aCurrency
         aCurrency.redeem(_amount * 1e18);
     }
-
-    fallback() external payable {}
 }

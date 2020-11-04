@@ -4,9 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./AcceptEverythingPaymaster.sol";
 
-import "./CommunitiesRegistry.sol";
-import "./Community.sol";
-import "./DITOToken.sol";
+import "../CommunitiesRegistry.sol";
 
 ///a sample paymaster that has whitelists for senders and targets.
 /// - if at least one sender is whitelisted, then ONLY whitelisted senders are allowed.
