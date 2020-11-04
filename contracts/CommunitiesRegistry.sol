@@ -1,16 +1,50 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.10;
 
-import "./ICommunity.sol";
+import "./Community.sol";
 
+/**
+ * @title DistributedTown CommunitiesRegistry
+ *
+ * @dev Implementation of the CommunitiesRegistry contract, which is a Factory and Registry of Communities
+ * @author DistributedTown
+ */
 contract CommunitiesRegistry {
-    address[] public communities;
+    event CommunityCreated(address _newCommunityAddress);
 
+    address[] public communities;
+    uint256 public numOfCommunities;
+
+    /**
+     * @dev Creates a community
+     * @return _communityAddress the newly created Community address
+     **/
+    function createCommunity() public returns (address _communityAddress) {
+        Community newCommunity = new Community(address(this));
+        address newCommunityAddress = address(newCommunity);
+        addCommunity(newCommunityAddress);
+
+        numOfCommunities = numOfCommunities + 1;
+
+        emit CommunityCreated(newCommunityAddress);
+
+        return newCommunityAddress;
+    }
+
+    /**
+     * @dev Adds a community to the registry
+     * @param _communityAddress the address of the community to add
+     **/
     function addCommunity(address _communityAddress) public {
         communities.push(_communityAddress);
     }
 
-    function currentCommunityOfUser()
+    /**
+     * @dev Gets the current community of a user
+     * @param _user the address of user to check
+     * @return communityAddress the address of the community of the user if existent, else 0 address
+     **/
+    function currentCommunityOfUser(address _user)
         public
         view
         returns (address communityAddress)
@@ -19,14 +53,14 @@ contract CommunitiesRegistry {
         bool userFound = false;
 
         while (!userFound && i < communities.length) {
-            ICommunity community = ICommunity(address(communities[i]));
-            userFound = community.enabledMembers(msg.sender);
+            Community community = Community(payable(communities[i]));
+            userFound = community.enabledMembers(_user);
 
             i++;
         }
 
         if (!userFound) return address(0);
 
-        return communities[i - 1];
+        return address(communities[i - 1]);
     }
 }

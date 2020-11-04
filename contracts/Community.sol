@@ -13,7 +13,6 @@ import "./IAtoken.sol";
 import "./IFiatTokenV2.sol";
 
 import "./DITOToken.sol";
-
 import "./WadRayMath.sol";
 
 /**
@@ -79,10 +78,6 @@ contract Community is BaseRelayRecipient {
         depositableACurrenciesContracts["DAI"] = address(
             0xcB1Fe6F440c49E9290c3eb7f158534c2dC374201
         );
-        // Aave on Ropsten doesn't implement it yet, pending
-        // depositableACurrenciesContracts["USDC"] = address(
-        //     0x2dB6a31f973Ec26F5e17895f0741BB5965d5Ae15
-        // );
     }
 
     /**
@@ -95,6 +90,7 @@ contract Community is BaseRelayRecipient {
 
         enabledMembers[_msgSender()] = true;
         numberOfMembers = numberOfMembers + 1;
+        tokens.addToWhitelist(_msgSender());
 
         tokens.transfer(_msgSender(), _amountOfDITOToRedeem * 1e18);
 
@@ -118,12 +114,16 @@ contract Community is BaseRelayRecipient {
             tokens.balanceOf(_msgSender())
         );
 
+        tokens.removeFromWhitelist(_msgSender());
+
         emit MemberRemoved(_msgSender());
     }
 
     /**
      * @dev makes the calling user deposit funds in the community if required conditions are met
-     * @param _amount number of DAI which the user wants to deposit
+     * @param _amount number of currency which the user wants to deposit
+     * @param _currency currency the user wants to deposit (as of now only DAI and USDC)
+     * @param _optionalSignatureInfo abiEncoded data in order to make USDC2 gasless transactions
      **/
     function deposit(
         uint256 _amount,
@@ -150,15 +150,19 @@ contract Community is BaseRelayRecipient {
         if (currencyStringHash == keccak256(bytes("DAI"))) {
             currency.transferFrom(_msgSender(), address(this), amount);
         } else if (currencyStringHash == keccak256(bytes("USDC"))) {
-            (bytes32 _nonce, uint8 _v, bytes32 _r, bytes32 _s) = abi.decode(
+            (
+                uint256 _validAfter,
+                uint256 _validBefore,
+                bytes32 _nonce,
+                uint8 _v,
+                bytes32 _r,
+                bytes32 _s
+            ) = abi.decode(
                 _optionalSignatureInfo,
-                (bytes32, uint8, bytes32, bytes32)
+                (uint256, uint256, bytes32, uint8, bytes32, bytes32)
             );
 
             amount = _amount * 1e6;
-
-            uint256 validBefore = block.timestamp + 3600; // Valid for an hour
-            uint256 validAfter = 0;
 
             IFiatTokenV2 usdcv2 = IFiatTokenV2(currencyAddress);
 
@@ -166,8 +170,8 @@ contract Community is BaseRelayRecipient {
                 _msgSender(),
                 address(this),
                 amount,
-                validAfter,
-                validBefore,
+                _validAfter,
+                _validBefore,
                 _nonce,
                 _v,
                 _r,
@@ -178,7 +182,8 @@ contract Community is BaseRelayRecipient {
 
     /**
      * @dev makes the calling user lend funds that are in the community contract into Aave if required conditions are met
-     * @param _amount number of DAI which the user wants to lend
+     * @param _amount number of currency which the user wants to lend
+     * @param _currency currency the user wants to deposit (as of now only DAI)
      **/
     function invest(uint256 _amount, string memory _currency)
         public
@@ -221,8 +226,41 @@ contract Community is BaseRelayRecipient {
     }
 
     /**
+     * @dev Returns the balance invested by the contract in Aave (invested + interest) and the APY
+     * @return investedBalance the aDai balance of the contract
+     * @return investedTokenAPY the median APY of invested balance
+     **/
+    function getInvestedBalanceInfo()
+        public
+        view
+        returns (uint256 investedBalance, uint256 investedTokenAPY)
+    {
+        address aDaiAddress = address(depositableACurrenciesContracts["DAI"]); // Ropsten aDAI
+
+        // Client has to convert to balanceOf / 1e18
+        uint256 _investedBalance = IAtoken(aDaiAddress).balanceOf(
+            address(this)
+        );
+
+        address daiAddress = address(depositableCurrenciesContracts["DAI"]);
+
+        // Retrieve LendingPool address
+        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
+            address(0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728)
+        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
+        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
+
+        // Client has to convert to balanceOf / 1e27
+        (, , , , uint256 daiLiquidityRate, , , , , , , , ) = lendingPool
+            .getReserveData(daiAddress);
+
+        return (_investedBalance, daiLiquidityRate);
+    }
+
+    /**
      * @dev makes the calling user withdraw funds that are in Aave back into the community contract if required conditions are met
      * @param _amount amount of currency which the user wants to withdraw
+     * @param _currency currency the user wants to deposit (as of now only DAI)
      **/
     function withdrawFromInvestment(uint256 _amount, string memory _currency)
         public
@@ -250,47 +288,6 @@ contract Community is BaseRelayRecipient {
 
         // Redeems _amount aCurrency
         aCurrency.redeem(_amount * 1e18);
-    }
-
-    /**
-     * @dev Returns the balance invested by the contract in Aave  (invested + interest) and the APY
-     * @return investedBalance the aDai balance of the contract
-     * @return investedTokenAPY the median APY of invested balance
-     **/
-    function getInvestedBalanceInfo()
-        public
-        view
-        returns (uint256 investedBalance, uint256 investedTokenAPY)
-    {
-        address aDaiAddress = address(depositableACurrenciesContracts["DAI"]); // Ropsten aDAI
-        // address aUsdcAddress = address(depositableACurrenciesContracts["USDC"]); // Ropsten aUSDC
-
-        // Client has to convert to balanceOf / 1e18
-        uint256 _investedBalance = IAtoken(aDaiAddress).balanceOf(
-            address(this)
-        );
-        // _investedBalance += IAtoken(aUsdcAddress).balanceOf(address(this));
-
-        address daiAddress = address(depositableCurrenciesContracts["DAI"]);
-        // address usdcAddress = address(depositableCurrenciesContracts["USDC"]);
-
-        // Retrieve LendingPool address
-        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728)
-        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
-        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
-
-        // Client has to convert to balanceOf / 1e27
-        (, , , , uint256 daiLiquidityRate, , , , , , , , ) = lendingPool
-            .getReserveData(daiAddress);
-        // (, , , , uint256 usdcLiquidityRate, , , , , , , , ) = lendingPool
-        //     .getReserveData(usdcAddress);
-
-        // uint256 liquidityRate = daiLiquidityRate.add(usdcLiquidityRate).rayDiv(
-        //     2
-        // );
-
-        return (_investedBalance, daiLiquidityRate);
     }
 
     fallback() external payable {}

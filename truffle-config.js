@@ -34,27 +34,23 @@ module.exports = {
       port: 8545,
       network_id: 5777,
     },
-    regtest: {
-      provider: new PrivateKeyProvider(privateKey, "http://127.0.0.1:4444"),
-      host: "127.0.0.1",
-      port: 4444,
-      network_id: 33,
-    },
-    regtestAccountTwo: {
-      provider: new PrivateKeyProvider(privateKey2, "http://127.0.0.1:4444"),
-      host: "127.0.0.1",
-      port: 4444,
-      network_id: 33,
-    },
     ropsten: {
       // must be a thunk, otherwise truffle commands may hang in CI
       provider: () =>
-        new HDWalletProvider({
-          mnemonic: mnemonicPhrase,
-          providerOrUrl: `https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-          addressIndex: 0,
-        }),
+        new HDWalletProvider(
+          mnemonicPhrase,
+          `https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`
+        ),
       network_id: "3",
+    },
+    mumbai: {
+      // must be a thunk, otherwise truffle commands may hang in CI
+      provider: () =>
+        new HDWalletProvider(
+          mnemonicPhrase,
+          `https://rpc-mumbai.maticvigil.com/v1/${process.env.MATICVIGIL_PROJECT_ID}`
+        ),
+      network_id: "80001",
     },
   },
   // Configure your compilers
@@ -62,6 +58,10 @@ module.exports = {
     solc: {
       version: "^0.6.10",
       evmVersion: "istanbul",
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
     },
   },
 };

@@ -12,6 +12,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract DITOToken is ERC20, Ownable {
     event AddedToWhitelist(address _communityMember);
+    event RemovedFromWhitelist(address _communityMember);
 
     mapping(address => bool) public whitelist;
 
@@ -25,10 +26,24 @@ contract DITOToken is ERC20, Ownable {
         _mint(msg.sender, initialSupply);
     }
 
+    /**
+     * @dev Adds a community member to the whitelist, called by the join function of the Community contract
+     * @param _communityMember the address of the new member of a Community to add to the whitelist
+     **/
     function addToWhitelist(address _communityMember) public onlyOwner {
         whitelist[_communityMember] = true;
 
         emit AddedToWhitelist(_communityMember);
+    }
+
+    /**
+     * @dev Removes a community member to the whitelist, called by the leave function of the Community contract
+     * @param _communityMember the address of the leaving member of a Community
+     **/
+    function removeFromWhitelist(address _communityMember) public onlyOwner {
+        whitelist[_communityMember] = false;
+
+        emit RemovedFromWhitelist(_communityMember);
     }
 
     function transfer(address recipient, uint256 amount)
