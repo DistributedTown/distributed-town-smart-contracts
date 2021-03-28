@@ -2,6 +2,7 @@
 pragma solidity ^0.6.10;
 
 import "./Community.sol";
+import "./Membership.sol";
 
 /**
  * @title DistributedTown CommunitiesRegistry
@@ -10,7 +11,7 @@ import "./Community.sol";
  * @author DistributedTown
  */
 contract CommunitiesRegistry {
-    event CommunityCreated(address _newCommunityAddress);
+    event CommunityCreated(address _newCommunityAddress, address _membershipAddress);
 
     address[] public communities;
     uint256 public numOfCommunities;
@@ -19,14 +20,16 @@ contract CommunitiesRegistry {
      * @dev Creates a community
      * @return _communityAddress the newly created Community address
      **/
-    function createCommunity() public returns (address _communityAddress) {
-        Membership membership = new Membership();
+    function createCommunity(uint template) public returns (address _communityAddress) {
+        Community community = new Community('', template);
+        address newCommunityAddress = address(community);
+
+        Membership membership = new Membership(newCommunityAddress);
         address newMembershipAddress = address(membership);
-        addCommunity(newCommunityAddress);
 
         numOfCommunities = numOfCommunities + 1;
 
-        emit CommunityCreated(newCommunityAddress);
+        emit CommunityCreated(newCommunityAddress, newMembershipAddress);
 
         return newCommunityAddress;
     }
