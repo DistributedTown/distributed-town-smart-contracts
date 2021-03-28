@@ -35,10 +35,10 @@ contract Membership {
         uint8 level;
     }
 
-    constructor() {
+    constructor(address _communityAddress) {
         numOfMembers = 0;
-        community = new Community();
-        communityAddress = address(community);
+        community = Community(_communityAddress);
+        communityAddress = _communityAddress;
         // add treasury
     }
 
