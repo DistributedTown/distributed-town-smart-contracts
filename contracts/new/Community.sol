@@ -17,11 +17,21 @@ import "./Membership.sol";
 contract Community is ERC1155 {
     using SafeMath for uint256;
 
-    uint256 public constant DITO_CREDITS_ID = 0;
-    uint256 public constant COMMUNITY_TEMPLATE_ID = 1;
+    Template public template;
 
-    // add JSON Schema
-    constructor() public ERC1155("") {
+    enum TokenType {
+        DiToCredit,
+        Community
+    }
+    enum Template {
+        Open-Source, 
+        Art, 
+        Local
+    }
+
+    // add JSON Schema base URL
+    constructor(_url, Template _template) public ERC1155(_url) {
+        template = _template;
         // Fungible DiToCredits ERC-20 token
         _mint(msg.sender, DITO_CREDITS_ID, 96000 * 1e18, "");
         // Non-Fungible Community template NFT token
@@ -31,14 +41,13 @@ contract Community is ERC1155 {
     function transferDiToCredits(
         address _from,
         address _to,
-        uint256 _value,
-        bytes calldata _data
-    ) public override {
+        uint256 _value
+    ) public {
         require(
-            _id != COMMUNITY_TEMPLATE_ID,
+            _id != uint(TokenType.Community),
             "Community NFT can't be trasfered"
         );
-        super.safeTransferFrom(_from, _to, DITO_CREDITS_IDs, _value, _data);
+        super.safeTransferFrom(_from, _to, uint(TokenType.DitoCredit), _value, "");
     }
 
     function safeTransferFrom(
@@ -49,7 +58,7 @@ contract Community is ERC1155 {
         bytes calldata _data
     ) public override {
         require(
-            _id != COMMUNITY_TEMPLATE_ID,
+            _id != uint(TokenType.Community),
             "Community NFT can't be trasfered"
         );
 
@@ -64,7 +73,7 @@ contract Community is ERC1155 {
         bytes calldata _data
     ) public override {
         require(
-            !contains(_ids, COMMUNITY_TEMPLATE_ID),
+            !contains(_ids, uint(TokenType.Community)),
             "Community NFT can't be trasfered"
         );
 
@@ -77,7 +86,7 @@ contract Community is ERC1155 {
         returns (uint256)
     {
         require(
-            _id != COMMUNITY_TEMPLATE_ID,
+            _id != uint(TokenType.Community),
             "Community NFT doesn't have a balance."
         );
         super.balanceOf(_owner, _id);
@@ -88,7 +97,7 @@ contract Community is ERC1155 {
         override
         returns (uint256)
     {
-        super.balanceOf(_owner, DITO_CREDITS_ID);
+        super.balanceOf(_owner, uint(TokenType.DiToCredit));
     }
 
     function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids)
@@ -97,7 +106,7 @@ contract Community is ERC1155 {
         returns (uint256[] memory)
     {
         require(
-            !contains(_ids, COMMUNITY_TEMPLATE_ID),
+            !contains(_ids, uint(TokenType.Community)),
             "Community NFT can't be trasfered"
         );
 

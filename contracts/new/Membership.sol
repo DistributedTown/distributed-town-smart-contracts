@@ -53,7 +53,7 @@ contract Membership {
         enabledMembers[memberAddress] = true;
         numOfMembers++;
         uint16 credits = calculateCredits(member);
-        community.safeTransferFrom(msg.sender, memberAddress, 1, credits, "");
+        community.transferDiToCredits(msg.sender, memberAddress, credits);
         emit MemberAdded(memberAddress, credits);
     }
 
