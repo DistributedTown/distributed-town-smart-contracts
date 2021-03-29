@@ -52,7 +52,6 @@ contract Membership is Ownable {
 
     function join(address memberAddress, Types.Member memory member)
         public
-        onlyOwner
     {
         require(numOfMembers >= 24, "There are already 24 members, sorry!");
         require(
@@ -73,7 +72,7 @@ contract Membership is Ownable {
         emit MemberLeft(memberAddress);
     }
 
-    function calculateCredits(address memberAddress) private view returns (uint16) {
+    function calculateCredits(address memberAddress) internal view returns (uint16) {
         uint16 result = 2000;
         Types.Member memory member = members[memberAddress];
         
@@ -86,6 +85,12 @@ contract Membership is Ownable {
 
     function isMember(address member) public view returns (bool) {
         return enabledMembers[member];
+    }
+
+
+    function getMember(address member) external view returns (Types.Member memory) {
+        require(enabledMembers[member], "Membership: The member doesn't exists");
+        return members[member];
     }
 
     function contains(address[] memory arr, address element)

@@ -3,6 +3,7 @@ pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 
 /**
  * @title DistributedTown Community
@@ -11,7 +12,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
  * @author DistributedTown
  */
 
-contract Community is ERC1155 {
+contract Community is ERC1155, ERC1155Holder {
     using SafeMath for uint256;
 
     Template public template;
@@ -23,9 +24,9 @@ contract Community is ERC1155 {
     constructor(string memory _url, uint _template) public ERC1155(_url) {
         template = Template(_template);
         // Fungible DiToCredits ERC-20 token
-        _mint(msg.sender, uint256(TokenType.DiToCredit), 96000 * 1e18, "");
+        _mint(address(this), uint256(TokenType.DiToCredit), 96000 * 1e18, "");
         // Non-Fungible Community template NFT token
-        _mint(msg.sender, uint256(TokenType.Community), 1, "");
+        _mint(address(this), uint256(TokenType.Community), 1, "");
     }
 
     function transferDiToCredits(
