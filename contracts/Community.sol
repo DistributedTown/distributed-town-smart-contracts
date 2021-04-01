@@ -3,7 +3,10 @@ pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
+
+import "./Membership.sol";
 
 /**
  * @title DistributedTown Community
@@ -14,33 +17,71 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 
 contract Community is ERC1155, ERC1155Holder {
     using SafeMath for uint256;
+    address SKILL_WALLET_ADDRESS = address(0);
 
-    Template public template;
 
     enum TokenType {DiToCredit, Community}
-    enum Template {OpenSource, Art, Local}
+
+    Membership membership;
+    IERC721 skillWallet;
+
+    address communityCreator;
+    uint16 activeMembersCount;
+    mapping(uint256 => bool) activeSkillWallets;
+
+    /**
+     * @dev emitted when a member is added
+     * @param _member the user which just joined the community
+     * @param _transferredTokens the amount of transferred dito tokens on join
+     **/
+    event MemberAdded(
+        address _member,
+        uint256 _skillWalletTokenId,
+        uint256 _transferredTokens
+    );
+    event MemberLeft(address _member);
 
     // add JSON Schema base URL
-    constructor(string memory _url, uint _template) public ERC1155(_url) {
-        template = Template(_template);
+    constructor(string memory _url) public ERC1155(_url) {
+        skillWallet = IERC721(SKILL_WALLET_ADDRESS);
+
         // Fungible DiToCredits ERC-20 token
         _mint(address(this), uint256(TokenType.DiToCredit), 96000 * 1e18, "");
         // Non-Fungible Community template NFT token
         _mint(address(this), uint256(TokenType.Community), 1, "");
     }
 
-    function transferDiToCredits(
-        address _from,
-        address _to,
-        uint256 _value
-    ) public {
-        super.safeTransferFrom(
-            _from,
-            _to,
-            0,
-            _value,
-            ""
+
+    // Generate SkillWallet
+    function join(uint256 skillWalletTokenId, uint64 credits) public {
+        require(
+            activeMembersCount <= 24,
+            "There are already 24 members, sorry!"
         );
+        require(
+            !activeSkillWallets[skillWalletTokenId],
+            "You have already joined!"
+        );
+
+        activeSkillWallets[skillWalletTokenId] = true;
+        activeMembersCount++;
+
+        address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
+
+        transferToMember(skillWalletAddress, credits);
+        emit MemberAdded(skillWalletAddress, skillWalletTokenId, credits);
+    }
+
+    function leave(address memberAddress) public {
+        emit MemberLeft(memberAddress);
+    }
+
+    function transferToMember(address _to, uint256 _value) public {
+        super.safeTransferFrom(address(this), _to, 0, _value, "");
+    }
+
+    function transferToCommunity(address _from, uint256 _value) public {
+        super.safeTransferFrom(_from, address(this), 0, _value, "");
     }
 
     function safeTransferFrom(
@@ -51,7 +92,7 @@ contract Community is ERC1155, ERC1155Holder {
         bytes calldata _data
     ) public override {
         require(
-            _id != uint256(TokenType.Community),
+            _id == uint256(TokenType.DiToCredit),
             "Community NFT can't be trasfered"
         );
 
@@ -80,7 +121,7 @@ contract Community is ERC1155, ERC1155Holder {
         returns (uint256)
     {
         require(
-            _id != uint256(TokenType.Community),
+            _id == uint256(TokenType.DiToCredit),
             "Community NFT doesn't have a balance."
         );
         super.balanceOf(_owner, _id);

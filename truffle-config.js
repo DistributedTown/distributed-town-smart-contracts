@@ -25,7 +25,7 @@ const HDWalletProvider = require("@truffle/hdwallet-provider");
 
 const privateKey = process.env.PRIVKEY_1; // Public Key: 0xcd2a3d9f938e13cd947ec05abc7fe734df8dd826
 const privateKey2 = process.env.PRIVKEY_2; // Public Add: 0x7986b3DF570230288501EEa3D890bd66948C9B79
-const mnemonicPhrase = 'close gesture fatal vacant time toy general horror payment visit case you'; // 12 word mnemonic
+const mnemonic = process.env.MNEMONIC;
 const maticKey = 'e1f46c82a85057bf8ea6c4e20e7ce2584a61954a';
 
 module.exports = {
@@ -39,13 +39,13 @@ module.exports = {
       // must be a thunk, otherwise truffle commands may hang in CI
       provider: () =>
         new HDWalletProvider(
-          mnemonicPhrase,
+          mnemonic,
           `https://ropsten.infura.io/v3/779285194bd146b48538d269d1332f20`
         ),
       network_id: "3",
     },
     matic: {
-      provider: () => new HDWalletProvider(mnemonicPhrase, `https://rpc-mumbai.matic.today`),
+      provider: () => new HDWalletProvider(mnemonic, `https://rpc-mumbai.matic.today`),
       network_id: 80001,
       confirmations: 2,
       timeoutBlocks: 200,
@@ -54,12 +54,24 @@ module.exports = {
     mumbai: {
       provider: () =>
         new HDWalletProvider(
-          mnemonicPhrase,
+          mnemonic,
           `https://rpc-mumbai.matic.today/v1/e1f46c82a85057bf8ea6c4e20e7ce2584a61954a`
         ),
       network_id: 80001, // matic testnet's id
       timeoutBlocks: 500, // # of blocks before a deployment times out  (minimum/default: 50)
       skipDryRun: false, // Skip dry run before migrations? (default: false for public nets )
+    },
+    kovan: {
+      provider: () =>
+        new HDWalletProvider(
+          mnemonic,
+          `https://kovan.infura.io/v3/779285194bd146b48538d269d1332f20`
+        ),
+      network_id: 42, // Ropsten's id
+      gas: 5500000, // Ropsten has a lower block limit than mainnet
+      confirmations: 2, // # of confs to wait between deployments. (default: 0)
+      timeoutBlocks: 500, // # of blocks before a deployment times out  (minimum/default: 50)
+      skipDryRun: true, // Skip dry run before migrations? (default: false for public nets )
     },
   },
   // Configure your compilers

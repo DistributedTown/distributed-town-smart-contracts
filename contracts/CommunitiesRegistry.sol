@@ -11,7 +11,7 @@ import "./Membership.sol";
  * @author DistributedTown
  */
 contract CommunitiesRegistry {
-    event CommunityCreated(address _newCommunityAddress, address _membershipAddress);
+    event CommunityCreated(address _newCommunityAddress);
 
     address[] public communities;
     uint256 public numOfCommunities;
@@ -21,15 +21,12 @@ contract CommunitiesRegistry {
      * @return _communityAddress the newly created Community address
      **/
     function createCommunity(uint template) public returns (address _communityAddress) {
-        Community community = new Community('', template);
+        Community community = new Community('');
         address newCommunityAddress = address(community);
-
-        Membership membership = new Membership(newCommunityAddress);
-        address newMembershipAddress = address(membership);
 
         numOfCommunities = numOfCommunities + 1;
 
-        emit CommunityCreated(newCommunityAddress, newMembershipAddress);
+        emit CommunityCreated(newCommunityAddress);
 
         return newCommunityAddress;
     }

@@ -26,6 +26,7 @@ contract Community is BaseRelayRecipient {
 
     using SafeMath for uint256;
     using WadRayMath for uint256;
+    mapping(address => address[]) skillWalletNFTs; 
 
     /**
      * @dev emitted when a member is added
