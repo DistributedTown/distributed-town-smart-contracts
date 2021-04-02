@@ -51,28 +51,22 @@ contract Community is ERC1155, ERC1155Holder {
         _mint(address(this), uint256(TokenType.Community), 1, "");
     }
 
-    function joinNew(address userAddress, Types.SkillSet skillSet, uint64 credits) public {
+    function joinNewMember(Types.SkillSet skillSet, uint64 credits) public {
         require(
             activeMembersCount <= 24,
             "There are already 24 members, sorry!"
         );
-        require(
-            !activeSkillWallets[skillWalletTokenId],
-            "You have already joined!"
-        );
 
-        activeSkillWallets[skillWalletTokenId] = true;
+        address tokenId = skillWallet.create(msg.sender, skillSet);
+
+        activeSkillWallets[tokenId] = true;
         activeMembersCount++;
 
-        // Skill Wallet Interface
-        address tokenId = skillWallet.create(skillSet);
-        skillWallet.safeTransferFrom(msg.sender, userAddress, tokenId, data);
-
-        transferToMember(skillWalletAddress, credits);
+        // get the skills from chainlink
+        transferToMember(msg.sender, credits);
         emit MemberAdded(skillWalletAddress, skillWalletTokenId, credits);
     }
 
-    // Generate SkillWallet
     function join(uint256 skillWalletTokenId, uint64 credits) public {
         require(
             activeMembersCount <= 24,
@@ -83,10 +77,15 @@ contract Community is ERC1155, ERC1155Holder {
             "You have already joined!"
         );
 
+        address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
+
+        require(
+            msg.sender == skillWalletAddress,
+            "Only the skill wallet owner can call this function"
+        );
+
         activeSkillWallets[skillWalletTokenId] = true;
         activeMembersCount++;
-
-        address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
 
         transferToMember(skillWalletAddress, credits);
         emit MemberAdded(skillWalletAddress, skillWalletTokenId, credits);

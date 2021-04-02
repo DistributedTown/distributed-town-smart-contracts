@@ -6,7 +6,8 @@ library Types {
         Skill skill3;
     }
     struct Skill {
-        uint8 value;
+        uint64 displayStringId;
+        uint8 posValue;
         uint8 level;
     }
 }
