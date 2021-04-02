@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 
 import "./Membership.sol";
+import "./SkillsStruct.sol";
 
 /**
  * @title DistributedTown Community
@@ -18,7 +19,6 @@ import "./Membership.sol";
 contract Community is ERC1155, ERC1155Holder {
     using SafeMath for uint256;
     address SKILL_WALLET_ADDRESS = address(0);
-
 
     enum TokenType {DiToCredit, Community}
 
@@ -51,6 +51,26 @@ contract Community is ERC1155, ERC1155Holder {
         _mint(address(this), uint256(TokenType.Community), 1, "");
     }
 
+    function joinNew(address userAddress, Types.SkillSet skillSet, uint64 credits) public {
+        require(
+            activeMembersCount <= 24,
+            "There are already 24 members, sorry!"
+        );
+        require(
+            !activeSkillWallets[skillWalletTokenId],
+            "You have already joined!"
+        );
+
+        activeSkillWallets[skillWalletTokenId] = true;
+        activeMembersCount++;
+
+        // Skill Wallet Interface
+        address tokenId = skillWallet.create(skillSet);
+        skillWallet.safeTransferFrom(msg.sender, userAddress, tokenId, data);
+
+        transferToMember(skillWalletAddress, credits);
+        emit MemberAdded(skillWalletAddress, skillWalletTokenId, credits);
+    }
 
     // Generate SkillWallet
     function join(uint256 skillWalletTokenId, uint64 credits) public {

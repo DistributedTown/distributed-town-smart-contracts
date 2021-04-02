@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Community.sol";
 
 
+
 /**
  * @title DistributedTown Membership contract
  *
