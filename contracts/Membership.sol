@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Community.sol";
-import "./SkillStruct.sol";
+import "./SkillsStruct.sol";
 
 
 
@@ -35,13 +35,9 @@ contract Membership {
         communityAddress = msg.sender;
         community = Community(msg.sender);
         template = _template;
-        positionalValue[1] = positionalValue1;
-        positionalValue[2] = positionalValue2;
-        positionalValue[3] = positionalValue3;
-    }
-
-    function getPoisitionalValues() public view returns(uint8[3] memory) {
-        return positionalValues;
+        positionalValues[1] = positionalValue1;
+        positionalValues[2] = positionalValue2;
+        positionalValues[3] = positionalValue3;
     }
 
     function getTemplate() public view returns(Template) {

@@ -1,5 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.10;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
@@ -51,20 +52,21 @@ contract Community is ERC1155, ERC1155Holder {
         _mint(address(this), uint256(TokenType.Community), 1, "");
     }
 
-    function joinNewMember(Types.SkillSet skillSet, uint64 credits) public {
+    function joinNewMember(Types.SkillSet calldata skillSet, string calldata uri, uint64 credits) public {
         require(
             activeMembersCount <= 24,
             "There are already 24 members, sorry!"
         );
 
-        address tokenId = skillWallet.create(msg.sender, skillSet);
+        // uint256 tokenId = skillWallet.create(msg.sender, skillSet, uri);
+        uint256 tokenId = 0;
 
         activeSkillWallets[tokenId] = true;
         activeMembersCount++;
 
         // get the skills from chainlink
         transferToMember(msg.sender, credits);
-        emit MemberAdded(skillWalletAddress, skillWalletTokenId, credits);
+        emit MemberAdded(msg.sender, tokenId, credits);
     }
 
     function join(uint256 skillWalletTokenId, uint64 credits) public {
