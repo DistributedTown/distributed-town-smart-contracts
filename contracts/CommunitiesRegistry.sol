@@ -13,22 +13,48 @@ import "./Membership.sol";
 contract CommunitiesRegistry {
     event CommunityCreated(address _newCommunityAddress);
 
-    address[] public communities;
+    mapping(address => bool) communities;
     uint256 public numOfCommunities;
+    address skillWalletAddress;
 
+    constructor(_skillWalletAddress) public {
+        skillWalletAddress = _skillWalletAddress;
+    }
+
+    
     /**
      * @dev Creates a community
      * @return _communityAddress the newly created Community address
      **/
-    function createCommunity(uint template) public returns (address _communityAddress) {
-        Community community = new Community('');
+    function createCommunity(
+        string memory _url,
+        uint256 _ownerId,
+        uint256 _ownerCredits,
+        string _name,
+        Types.Template _template,
+        uint8 _positionalValue1,
+        uint8 _positionalValue2,
+        uint8 _positionalValue3
+    ) public returns (address _communityAddress) {
+        Community community = new Community(
+            _url,
+            _ownerId,
+            _ownerCredits,
+            _name,
+            _template,
+            _positionalValue1,
+            _positionalValue2,
+            _positionalValue3,
+            skillWalletAddress,
+            address(this)
+        );
         address newCommunityAddress = address(community);
 
         numOfCommunities = numOfCommunities + 1;
+        communities[address(community)] = true;
 
         emit CommunityCreated(newCommunityAddress);
 
         return newCommunityAddress;
     }
-
 }

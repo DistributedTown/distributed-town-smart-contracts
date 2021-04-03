@@ -9,6 +9,9 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 
 import "./Membership.sol";
 import "./SkillsStruct.sol";
+import "./CommunityRegistry.sol";
+import "./CommonTypes.sol";
+import "./ISkillWallet.sol";
 
 /**
  * @title DistributedTown Community
@@ -20,15 +23,20 @@ import "./SkillsStruct.sol";
 contract Community is ERC1155, ERC1155Holder {
     using SafeMath for uint256;
     address SKILL_WALLET_ADDRESS = address(0);
+    address COMMUNITY_REGISTRY_ADDRESS = address(0);
 
     enum TokenType {DiToCredit, Community}
 
     Membership membership;
-    IERC721 skillWallet;
+    ISkillWallets skillWallet;
 
+    CommunitiesRegistry registry;
+
+    string name;
     address communityCreator;
     uint16 activeMembersCount;
     mapping(uint256 => bool) activeSkillWallets;
+    uint256 owner;
 
     /**
      * @dev emitted when a member is added
@@ -43,23 +51,53 @@ contract Community is ERC1155, ERC1155Holder {
     event MemberLeft(address _member);
 
     // add JSON Schema base URL
-    constructor(string memory _url) public ERC1155(_url) {
-        skillWallet = IERC721(SKILL_WALLET_ADDRESS);
+    constructor(
+        string memory _url,
+        uint256 _ownerId,
+        uint256 _ownerCredits,
+        string _name,
+        Types.Template _template,
+        uint8 _positionalValue1, 
+        uint8 _positionalValue2,
+        uint8 _positionalValue3,
+        address skillWalletAddress,
+        address communityRegistryAddress
+    ) public ERC1155(_url) {
+        skillWallet = ISkillWallet(skillWalletAddress);
+        registry = CommunitiesRegistry(communityRegistryAddress);
+        membership = new Membership(_template, _positionalValue1, _positionalValue2, _positionalValue3);
+        name =_name;
+        if (registry.numOfCommunities == 0) {
+            mintTokens();
+        } else {
+            // check if it's valid.
+            address ownerOfTheWallet = skillWallet.ownerOf(_ownerId);
+            if (ownerOfTheWallet != address(0)) {
+                mintTokens();
+                owner = _ownerId;
+                join(_ownerId, _ownerCredits);
+            }
+        }
+    }
 
+    function mintTokens() private {
         // Fungible DiToCredits ERC-20 token
         _mint(address(this), uint256(TokenType.DiToCredit), 96000 * 1e18, "");
         // Non-Fungible Community template NFT token
         _mint(address(this), uint256(TokenType.Community), 1, "");
     }
 
-    function joinNewMember(Types.SkillSet calldata skillSet, string calldata uri, uint64 credits) public {
+    function joinNewMember(
+        Types.SkillSet calldata skillSet,
+        string calldata uri,
+        uint64 credits
+    ) public {
         require(
             activeMembersCount <= 24,
             "There are already 24 members, sorry!"
         );
 
-        // uint256 tokenId = skillWallet.create(msg.sender, skillSet, uri);
-        uint256 tokenId = 0;
+        uint256 tokenId = skillWallet.create(msg.sender, skillSet, uri);
 
         activeSkillWallets[tokenId] = true;
         activeMembersCount++;

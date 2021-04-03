@@ -1,10 +1,18 @@
 const CommunitiesRegistry = artifacts.require("CommunitiesRegistry");
+const Types = artifacts.require('CommonTypes');
 
 module.exports = async function (deployer) {
   const communitiesRegistry = await CommunitiesRegistry.deployed();
-  await Promise.all([
-    communitiesRegistry.createCommunity(1),
-    // communitiesRegistry.createCommunity(2),
-    // communitiesRegistry.createCommunity(3),
-  ]);
+  communitiesRegistry.createCommunity(
+    "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice",
+    0,
+    0,
+    'GenesisTown',
+    Types.Template.Other,
+    6,
+    12,
+    24,
+    address(0),
+    communitiesRegistry.address
+  );
 };

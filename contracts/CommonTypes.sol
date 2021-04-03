@@ -10,4 +10,10 @@ library Types {
         uint8 posValue;
         uint8 level;
     }
+    enum Template {
+        OpenSource, 
+        Art, 
+        Local,
+        Other
+    }
 }

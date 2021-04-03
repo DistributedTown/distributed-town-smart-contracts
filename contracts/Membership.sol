@@ -20,16 +20,10 @@ contract Membership {
 
     using SafeMath for uint256;
 
-    enum Template {
-        OpenSource, 
-        Art, 
-        Local,
-        Other
-    }
     address public communityAddress;
     Community community;
-    Template template;
-    mapping(uint16 => uint16) positionalValues;
+    Template public template;
+    mapping(uint16 => uint16) public positionalValues;
 
     constructor(Template _template, uint8 positionalValue1, uint8 positionalValue2, uint8 positionalValue3) public {
         communityAddress = msg.sender;
@@ -40,7 +34,4 @@ contract Membership {
         positionalValues[3] = positionalValue3;
     }
 
-    function getTemplate() public view returns(Template) {
-        return template;
-    }
 }
