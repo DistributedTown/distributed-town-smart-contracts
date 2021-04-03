@@ -1,13 +1,11 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.6.10;
+pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 // TODO: figure out rates.
 contract Gigs {
     using Counters for Counters.Counter;
-    using SafeMath for uint256;
 
     event GigCreated(address _creator, uint256 _gigId);
     event GigCompleted(address _creator, address _gigCompleter, uint256 _gigId);

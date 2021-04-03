@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.6.10;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
 import "./Membership.sol";
 import "./CommunitiesRegistry.sol";
@@ -20,7 +20,6 @@ import "./ISkillWallet.sol";
  */
 
 contract Community is ERC1155, ERC1155Holder {
-    using SafeMath for uint256;
     address SKILL_WALLET_ADDRESS = address(0);
     address COMMUNITY_REGISTRY_ADDRESS = address(0);
 
@@ -224,6 +223,17 @@ contract Community is ERC1155, ERC1155Holder {
         returns (bool)
     {
         super.isApprovedForAll(_owner, _operator);
+    }
+
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, ERC1155Receiver) returns (bool) {
+        return interfaceId == type(IERC1155).interfaceId
+        || interfaceId == type(IERC1155MetadataURI).interfaceId
+        || interfaceId == type(IERC1155Receiver).interfaceId
+        || super.supportsInterface(interfaceId);
     }
 
     function getMembership() public returns (Membership) {
