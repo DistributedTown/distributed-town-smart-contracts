@@ -17,7 +17,7 @@ contract CommunitiesRegistry {
     uint256 public numOfCommunities;
     address skillWalletAddress;
 
-    constructor(_skillWalletAddress) public {
+    constructor(address _skillWalletAddress) public {
         skillWalletAddress = _skillWalletAddress;
     }
 
@@ -29,8 +29,8 @@ contract CommunitiesRegistry {
     function createCommunity(
         string memory _url,
         uint256 _ownerId,
-        uint256 _ownerCredits,
-        string _name,
+        uint64 _ownerCredits,
+        string memory _name,
         Types.Template _template,
         uint8 _positionalValue1,
         uint8 _positionalValue2,

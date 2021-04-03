@@ -4,9 +4,8 @@ pragma solidity ^0.6.10;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-
 // TODO: figure out rates.
-contract GigRegistry {
+contract Gigs {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
 
@@ -32,6 +31,7 @@ contract GigRegistry {
     mapping(address => uint256[]) ownersToGigs;
     mapping(address => uint256[]) completedGigs;
     mapping(uint256 => bool) isValidated;
+
 
     function createGig(uint256 ditoCredits) public {
         gigs[gigId.current()] = Gig(

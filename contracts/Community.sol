@@ -8,8 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 
 import "./Membership.sol";
-import "./SkillsStruct.sol";
-import "./CommunityRegistry.sol";
+import "./CommunitiesRegistry.sol";
 import "./CommonTypes.sol";
 import "./ISkillWallet.sol";
 
@@ -28,7 +27,7 @@ contract Community is ERC1155, ERC1155Holder {
     enum TokenType {DiToCredit, Community}
 
     Membership membership;
-    ISkillWallets skillWallet;
+    ISkillWallet skillWallet;
 
     CommunitiesRegistry registry;
 
@@ -54,10 +53,10 @@ contract Community is ERC1155, ERC1155Holder {
     constructor(
         string memory _url,
         uint256 _ownerId,
-        uint256 _ownerCredits,
-        string _name,
+        uint64 _ownerCredits,
+        string memory _name,
         Types.Template _template,
-        uint8 _positionalValue1, 
+        uint8 _positionalValue1,
         uint8 _positionalValue2,
         uint8 _positionalValue3,
         address skillWalletAddress,
@@ -65,18 +64,23 @@ contract Community is ERC1155, ERC1155Holder {
     ) public ERC1155(_url) {
         skillWallet = ISkillWallet(skillWalletAddress);
         registry = CommunitiesRegistry(communityRegistryAddress);
-        membership = new Membership(_template, _positionalValue1, _positionalValue2, _positionalValue3);
-        name =_name;
-        if (registry.numOfCommunities == 0) {
+        membership = new Membership(
+            _template,
+            _positionalValue1,
+            _positionalValue2,
+            _positionalValue3
+        );
+        name = _name;
+        if (registry.numOfCommunities() == 0) {
             mintTokens();
         } else {
             // check if it's valid.
-            address ownerOfTheWallet = skillWallet.ownerOf(_ownerId);
-            if (ownerOfTheWallet != address(0)) {
-                mintTokens();
-                owner = _ownerId;
-                join(_ownerId, _ownerCredits);
-            }
+            // address ownerOfTheWallet = skillWallet.ownerOf(_ownerId);
+            // if (ownerOfTheWallet != address(0)) {
+            mintTokens();
+            owner = _ownerId;
+            join(_ownerId, _ownerCredits);
+            // }
         }
     }
 
@@ -218,6 +222,10 @@ contract Community is ERC1155, ERC1155Holder {
         returns (bool)
     {
         super.isApprovedForAll(_owner, _operator);
+    }
+
+    function getMembership() public returns (Membership) {
+        return membership;
     }
 
     function contains(uint256[] memory arr, uint256 element)

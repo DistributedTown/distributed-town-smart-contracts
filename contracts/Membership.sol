@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Community.sol";
-import "./SkillsStruct.sol";
+import "./CommonTypes.sol";
 
 
 
@@ -22,10 +22,10 @@ contract Membership {
 
     address public communityAddress;
     Community community;
-    Template public template;
+    Types.Template public template;
     mapping(uint16 => uint16) public positionalValues;
 
-    constructor(Template _template, uint8 positionalValue1, uint8 positionalValue2, uint8 positionalValue3) public {
+    constructor(Types.Template _template, uint8 positionalValue1, uint8 positionalValue2, uint8 positionalValue3) public {
         communityAddress = msg.sender;
         community = Community(msg.sender);
         template = _template;
