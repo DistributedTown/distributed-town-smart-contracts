@@ -1,21 +1,39 @@
-# Truffle
+# DistributedTown SmartContracts
 
-## Deployment
+## Install
 
-`truffle migrate --network regtest`
-_run it twice to avoid truff issue #2224 _
+`yarn install`
 
-## Network Config
+## Local deployment
 
-In order to use `--network regtest` in above commands, you need to make sure in truffle-config.js the networks setting include regtest
+Make sure `defaultNetwork` in hardhat.config.js (on line 24) is set to `localhost`.
 
-```js
-networks: {
-    regtest: {
-      provider: new PrivateKeyProvider(privateKey, "http://127.0.0.1:4444"),
-      host: "127.0.0.1",
-      port: 4444,
-      network_id: 33,
-    }
-},
-```
+Terminal 1#:
+
+`yarn chain`
+
+Terminal #2:
+
+1. Change the value of the `skillWalletAddress` variable in `scripts/deployCommunityRegistry.js` (line 9)
+2. Run `yarn deployCommunityRegistry`
+
+3. Change the value of the `communityRegistryAddress` variable in `scripts/dcreateCommunity.js` (line 7)
+4. Run `yarn createCommunity`
+
+5. Run `yarn deployGigsRegistry`
+
+## Matic testnet deployment
+
+Run: `yarn generate` and `yarn account` to generate and verify account first.
+
+Make sure `defaultNetwork` in hardhat.config.js (on line 24) is set to `maticTestnet`.
+
+Terminal #1:
+
+1. Change the value of the `skillWalletAddress` variable in `scripts/deployCommunityRegistry.js` (line 9)
+2. Run `yarn deployCommunityRegistry`
+
+3. Change the value of the `communityRegistryAddress` variable in `scripts/dcreateCommunity.js` (line 7)
+4. Run `yarn createCommunity`
+
+5. Run `yarn deployGigsRegistry`

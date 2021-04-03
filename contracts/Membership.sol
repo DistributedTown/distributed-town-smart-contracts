@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.6.10;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Community.sol";
 import "./CommonTypes.sol";
@@ -17,8 +15,6 @@ import "./CommonTypes.sol";
  */
 
 contract Membership {
-
-    using SafeMath for uint256;
 
     address public communityAddress;
     Community community;
