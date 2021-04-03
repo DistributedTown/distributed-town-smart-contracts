@@ -26,7 +26,6 @@ const HDWalletProvider = require("@truffle/hdwallet-provider");
 const privateKey = process.env.PRIVKEY_1; // Public Key: 0xcd2a3d9f938e13cd947ec05abc7fe734df8dd826
 const privateKey2 = process.env.PRIVKEY_2; // Public Add: 0x7986b3DF570230288501EEa3D890bd66948C9B79
 const mnemonic = process.env.MNEMONIC;
-const maticKey = 'e1f46c82a85057bf8ea6c4e20e7ce2584a61954a';
 
 module.exports = {
   networks: {
@@ -55,7 +54,7 @@ module.exports = {
       provider: () =>
         new HDWalletProvider(
           mnemonic,
-          `https://rpc-mumbai.matic.today/v1/e1f46c82a85057bf8ea6c4e20e7ce2584a61954a`
+          `https://rpc-mumbai.maticvigil.com/`
         ),
       network_id: 80001, // matic testnet's id
       timeoutBlocks: 500, // # of blocks before a deployment times out  (minimum/default: 50)

@@ -12,7 +12,7 @@ module.exports = async function (deployer) {
     6,
     12,
     24,
-    address(0),
+    communitiesRegistry.skillWalletAddress(),
     communitiesRegistry.address
   );
 };

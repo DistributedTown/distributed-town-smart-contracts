@@ -101,7 +101,9 @@ contract Community is ERC1155, ERC1155Holder {
             "There are already 24 members, sorry!"
         );
 
-        uint256 tokenId = skillWallet.create(msg.sender, skillSet, uri);
+        skillWallet.create(msg.sender, skillSet, uri);
+
+        uint256 tokenId = skillWallet.getSkillWalletIdByOwner(msg.sender);
 
         activeSkillWallets[tokenId] = true;
         activeMembersCount++;

@@ -15,7 +15,7 @@ contract CommunitiesRegistry {
 
     mapping(address => bool) communities;
     uint256 public numOfCommunities;
-    address skillWalletAddress;
+    address public skillWalletAddress;
 
     constructor(address _skillWalletAddress) public {
         skillWalletAddress = _skillWalletAddress;
@@ -51,7 +51,7 @@ contract CommunitiesRegistry {
         address newCommunityAddress = address(community);
 
         numOfCommunities = numOfCommunities + 1;
-        communities[address(community)] = true;
+        communities[newCommunityAddress] = true;
 
         emit CommunityCreated(newCommunityAddress);
 

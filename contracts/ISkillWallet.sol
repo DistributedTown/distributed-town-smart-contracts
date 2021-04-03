@@ -22,4 +22,6 @@ interface ISkillWallet is IERC721 {
 
     function getTotalSkillWalletsRegistered() external view returns (uint256);
 
+    function getSkillWalletIdByOwner(address owner) external view returns (uint256);
+
 }
