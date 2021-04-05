@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
@@ -11,6 +10,7 @@ import "./Membership.sol";
 import "./CommunitiesRegistry.sol";
 import "./CommonTypes.sol";
 import "./ISkillWallet.sol";
+import "./ERC1155.sol";
 
 /**
  * @title DistributedTown Community
@@ -60,7 +60,7 @@ contract Community is ERC1155, ERC1155Holder {
         uint8 _positionalValue3,
         address skillWalletAddress,
         address communityRegistryAddress
-    ) public ERC1155(_url) {
+    ) public ERC1155(_url, communityRegistryAddress) {
         skillWallet = ISkillWallet(skillWalletAddress);
         registry = CommunitiesRegistry(communityRegistryAddress);
         membership = new Membership(
