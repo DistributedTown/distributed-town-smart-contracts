@@ -43,20 +43,20 @@ module.exports = {
   // (you will need to restart the `yarn run start` dev server after editing the .env)
 
   networks: {
-    // localhost: {
-    //   url: "http://localhost:8545",
-    //   /*
-    //     notice no mnemonic here? it will just use account 0 of the hardhat node to deploy
-    //     (you can put in a mnemonic here to set the deployer locally)
-    //   */
-    // },
-    // matic: {
-    //   url: 'https://rpc-mainnet.maticvigil.com/',
-    //   gasPrice: 1000000000,
-    //   accounts: {
-    //     mnemonic: mnemonic(),
-    //   },
-    // },
+    localhost: {
+      url: "http://localhost:8545",
+      /*
+        notice no mnemonic here? it will just use account 0 of the hardhat node to deploy
+        (you can put in a mnemonic here to set the deployer locally)
+      */
+    },
+    matic: {
+      url: 'https://rpc-mainnet.maticvigil.com/',
+      gasPrice: 1000000000,
+      accounts: {
+        mnemonic: mnemonic(),
+      },
+    },
     maticTestnet: {
       url: 'https://rpc-mumbai.maticvigil.com/',
       gasPrice: 1000000000,

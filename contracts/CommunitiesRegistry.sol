@@ -83,7 +83,7 @@ contract CommunitiesRegistry {
         communityContr.join(skillWalletTokenId, credits);
     }
 
-    function getCommunities() external view returns(address[] memory) {
+    function getCommunities() public view returns(address[] memory) {
         return communityAddresses;
     }
 }
