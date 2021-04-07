@@ -13,7 +13,8 @@ import "./Membership.sol";
 contract CommunitiesRegistry {
     event CommunityCreated(address _newCommunityAddress);
 
-    mapping(address => bool) public communities;
+    mapping(address => bool) public isCommunity;
+    address[] public communityAddresses;
     uint256 public numOfCommunities;
     address public skillWalletAddress;
 
@@ -34,7 +35,7 @@ contract CommunitiesRegistry {
         uint8 _positionalValue1,
         uint8 _positionalValue2,
         uint8 _positionalValue3
-    ) public returns (address _communityAddress) {
+    ) external returns (address _communityAddress) {
         Community community =
             new Community(
                 _url,
@@ -50,8 +51,9 @@ contract CommunitiesRegistry {
             );
         address newCommunityAddress = address(community);
 
+        isCommunity[newCommunityAddress] = true;
+        communityAddresses.push(newCommunityAddress);
         numOfCommunities = numOfCommunities + 1;
-        communities[newCommunityAddress] = true;
 
         emit CommunityCreated(newCommunityAddress);
 
@@ -63,8 +65,8 @@ contract CommunitiesRegistry {
         Types.SkillSet calldata skillSet,
         string calldata uri,
         uint256 credits
-    ) public {
-        require(communities[community], "Invalid community address!");
+    ) external {
+        require(isCommunity[community], "Invalid community address!");
 
         Community communityContr = Community(community);
         communityContr.joinNewMember(msg.sender, skillSet, uri, credits);
@@ -74,10 +76,14 @@ contract CommunitiesRegistry {
         address community,
         uint256 skillWalletTokenId,
         uint256 credits
-    ) public {
-        require(communities[community], "Invalid community address!");
+    ) external {
+        require(isCommunity[community], "Invalid community address!");
 
         Community communityContr = Community(community);
         communityContr.join(skillWalletTokenId, credits);
+    }
+
+    function getCommunities() external view returns(address[] memory) {
+        return communityAddresses;
     }
 }

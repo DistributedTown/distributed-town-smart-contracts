@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 // TODO: figure out rates.
+// TODO: transfer tokens.
+// TODO: 1 gigs instance per community
 contract Gigs {
     using Counters for Counters.Counter;
 

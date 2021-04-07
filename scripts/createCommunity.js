@@ -4,7 +4,7 @@ const { ethers } = require("hardhat");
 const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
-    const communityRegistryAddress = "0x201CF2F2B667Fd0FCA1bdcE7C361fcF1f4880004";
+    const communityRegistryAddress = "0x0165878A594ca255338adfa4d48449f69242Eb8F";
 
     //
     const communityRegistryFactory = await ethers.getContractFactory("CommunitiesRegistry");
