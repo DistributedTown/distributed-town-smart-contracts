@@ -11,7 +11,7 @@ import "./Membership.sol";
  * @author DistributedTown
  */
 contract CommunitiesRegistry {
-    event CommunityCreated(address _newCommunityAddress);
+    event CommunityCreated(address indexed creator, address indexed community, address indexed membership, string name);
 
     mapping(address => bool) public isCommunity;
     address[] public communityAddresses;
@@ -55,7 +55,7 @@ contract CommunitiesRegistry {
         communityAddresses.push(newCommunityAddress);
         numOfCommunities = numOfCommunities + 1;
 
-        emit CommunityCreated(newCommunityAddress);
+        emit CommunityCreated(msg.sender, newCommunityAddress, address(community.getMembership()), community.name());
 
         return newCommunityAddress;
     }
