@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
+pragma solidity ^0.7.4;
+pragma experimental ABIEncoderV2;
 import "./Community.sol";
 import "./Membership.sol";
 
@@ -62,14 +62,20 @@ contract CommunitiesRegistry {
 
     function joinNewMember(
         address community,
-        Types.SkillSet calldata skillSet,
+        address userAddress,
+        uint64 displayStringId1,
+        uint8 level1,
+        uint64 displayStringId2,
+        uint8 level2,
+        uint64 displayStringId3,
+        uint8 level3,
         string calldata uri,
         uint256 credits
     ) external {
         require(isCommunity[community], "Invalid community address!");
 
         Community communityContr = Community(community);
-        communityContr.joinNewMember(msg.sender, skillSet, uri, credits);
+        communityContr.joinNewMember(userAddress, displayStringId1, level1, displayStringId2, level2, displayStringId3, level3, uri, credits);
     }
 
     function joinExistingSW(
