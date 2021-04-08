@@ -1,9 +1,10 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.7.4;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
 import "./Membership.sol";
@@ -20,7 +21,6 @@ import "./ERC1155.sol";
  */
 
 contract Community is ERC1155, ERC1155Holder {
-
     enum TokenType {DiToCredit, Community}
 
     Membership membership;
@@ -88,7 +88,12 @@ contract Community is ERC1155, ERC1155Holder {
     // check if it's called only from deployer.
     function joinNewMember(
         address newMemberAddress,
-        Types.SkillSet calldata skillSet,
+        uint64 displayStringId1,
+        uint8 level1,
+        uint64 displayStringId2,
+        uint8 level2,
+        uint64 displayStringId3,
+        uint8 level3,
         string calldata uri,
         uint256 credits
     ) public {
@@ -96,6 +101,13 @@ contract Community is ERC1155, ERC1155Holder {
             activeMembersCount <= 24,
             "There are already 24 members, sorry!"
         );
+
+        Types.SkillSet memory skillSet =
+            Types.SkillSet(
+                Types.Skill(displayStringId1, level1),
+                Types.Skill(displayStringId2, level2),
+                Types.Skill(displayStringId3, level3)
+            );
 
         skillWallet.create(newMemberAddress, skillSet, uri);
 
@@ -106,7 +118,7 @@ contract Community is ERC1155, ERC1155Holder {
         activeMembersCount++;
 
         // get the skills from chainlink
-        transferToMember(newMemberAddress, credits);
+        // transferToMember(newMemberAddress, credits);
         emit MemberAdded(newMemberAddress, tokenId, credits);
     }
 
@@ -115,10 +127,7 @@ contract Community is ERC1155, ERC1155Holder {
             activeMembersCount <= 24,
             "There are already 24 members, sorry!"
         );
-        require(
-            !isMember[skillWalletTokenId],
-            "You have already joined!"
-        );
+        require(!isMember[skillWalletTokenId], "You have already joined!");
 
         address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
 
@@ -139,7 +148,11 @@ contract Community is ERC1155, ERC1155Holder {
         emit MemberLeft(memberAddress);
     }
 
-    function getSkillWalletIds() public view returns(uint256[] memory skillWalletIds){
+    function getSkillWalletIds()
+        public
+        view
+        returns (uint256[] memory skillWalletIds)
+    {
         return skillWalletIds;
     }
 
@@ -228,15 +241,21 @@ contract Community is ERC1155, ERC1155Holder {
         super.isApprovedForAll(_owner, _operator);
     }
 
-
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, ERC1155Receiver) returns (bool) {
-        return interfaceId == type(IERC1155).interfaceId
-        || interfaceId == type(IERC1155MetadataURI).interfaceId
-        || interfaceId == type(IERC1155Receiver).interfaceId
-        || super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC1155, ERC165)
+        returns (bool)
+    {
+        return
+            interfaceId == type(IERC1155).interfaceId ||
+            interfaceId == type(IERC1155MetadataURI).interfaceId ||
+            // || interfaceId == type(IERC1155Receiver).interfaceId
+            super.supportsInterface(interfaceId);
     }
 
     function getMembership() public view returns (Membership) {
@@ -247,14 +266,12 @@ contract Community is ERC1155, ERC1155Holder {
         return membership.template();
     }
 
-    
     function getPositionalValues() public view returns (uint16[3] memory) {
         uint16 p1 = membership.positionalValues(1);
         uint16 p2 = membership.positionalValues(2);
         uint16 p3 = membership.positionalValues(3);
         return [p1, p2, p3];
     }
-
 
     function contains(uint256[] memory arr, uint256 element)
         internal
