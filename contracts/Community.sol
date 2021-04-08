@@ -20,6 +20,8 @@ import "./ERC1155.sol";
  */
 
 contract Community is ERC1155, ERC1155Holder {
+    address SKILL_WALLET_ADDRESS = address(0);
+    address COMMUNITY_REGISTRY_ADDRESS = address(0);
 
     enum TokenType {DiToCredit, Community}
 
@@ -32,8 +34,7 @@ contract Community is ERC1155, ERC1155Holder {
     uint256 public ownerId;
     uint16 public activeMembersCount;
     uint256 public scarcityScore;
-    mapping(uint256 => bool) public isMember;
-    uint256[] public skillWalletIds;
+    mapping(uint256 => bool) public activeSkillWallets;
 
     /**
      * @dev emitted when a member is added
@@ -41,11 +42,11 @@ contract Community is ERC1155, ERC1155Holder {
      * @param _transferredTokens the amount of transferred dito tokens on join
      **/
     event MemberAdded(
-        address _member,
+        address indexed _member,
         uint256 _skillWalletTokenId,
         uint256 _transferredTokens
     );
-    event MemberLeft(address _member);
+    event MemberLeft(address indexed _member);
 
     // add JSON Schema base URL
     constructor(
@@ -78,9 +79,9 @@ contract Community is ERC1155, ERC1155Holder {
         }
     }
 
-    function mintTokens() internal {
+    function mintTokens() private {
         // Fungible DiToCredits ERC-20 token
-        _mint(address(this), uint256(TokenType.DiToCredit), 96000 * 1e4, "");
+        _mint(address(this), uint256(TokenType.DiToCredit), 96000 * 1e18, "");
         // Non-Fungible Community template NFT token
         _mint(address(this), uint256(TokenType.Community), 1, "");
     }
@@ -101,8 +102,7 @@ contract Community is ERC1155, ERC1155Holder {
 
         uint256 tokenId = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
 
-        isMember[tokenId] = true;
-        skillWalletIds.push(tokenId);
+        activeSkillWallets[tokenId] = true;
         activeMembersCount++;
 
         // get the skills from chainlink
@@ -116,7 +116,7 @@ contract Community is ERC1155, ERC1155Holder {
             "There are already 24 members, sorry!"
         );
         require(
-            !isMember[skillWalletTokenId],
+            !activeSkillWallets[skillWalletTokenId],
             "You have already joined!"
         );
 
@@ -127,8 +127,7 @@ contract Community is ERC1155, ERC1155Holder {
         //     "Only the skill wallet owner can call this function"
         // );
 
-        isMember[skillWalletTokenId] = true;
-        skillWalletIds.push(skillWalletTokenId);
+        activeSkillWallets[skillWalletTokenId] = true;
         activeMembersCount++;
 
         transferToMember(skillWalletAddress, credits);
@@ -137,10 +136,6 @@ contract Community is ERC1155, ERC1155Holder {
 
     function leave(address memberAddress) public {
         emit MemberLeft(memberAddress);
-    }
-
-    function getSkillWalletIds() public view returns(uint256[] memory skillWalletIds){
-        return skillWalletIds;
     }
 
     function transferToMember(address _to, uint256 _value) public {
@@ -182,10 +177,10 @@ contract Community is ERC1155, ERC1155Holder {
     }
 
     function balanceOf(address _owner, uint256 _id)
-        public
-        view
-        override
-        returns (uint256)
+    public
+    view
+    override
+    returns (uint256)
     {
         require(
             _id == uint256(TokenType.DiToCredit),
@@ -199,10 +194,10 @@ contract Community is ERC1155, ERC1155Holder {
     }
 
     function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids)
-        public
-        view
-        override
-        returns (uint256[] memory)
+    public
+    view
+    override
+    returns (uint256[] memory)
     {
         require(
             !contains(_ids, uint256(TokenType.Community)),
@@ -213,17 +208,17 @@ contract Community is ERC1155, ERC1155Holder {
     }
 
     function setApprovalForAll(address _operator, bool _approved)
-        public
-        override
+    public
+    override
     {
         super.setApprovalForAll(_operator, _approved);
     }
 
     function isApprovedForAll(address _owner, address _operator)
-        public
-        view
-        override
-        returns (bool)
+    public
+    view
+    override
+    returns (bool)
     {
         super.isApprovedForAll(_owner, _operator);
     }
@@ -243,23 +238,11 @@ contract Community is ERC1155, ERC1155Holder {
         return membership;
     }
 
-    function getTemplate() public view returns (Types.Template) {
-        return membership.template();
-    }
-
-    
-    function getPositionalValues() public view returns (uint16[3] memory) {
-        uint16 p1 = membership.positionalValues(1);
-        uint16 p2 = membership.positionalValues(2);
-        uint16 p3 = membership.positionalValues(3);
-        return [p1, p2, p3];
-    }
-
 
     function contains(uint256[] memory arr, uint256 element)
-        internal
-        pure
-        returns (bool)
+    internal
+    view
+    returns (bool)
     {
         for (uint256 i = 0; i < arr.length; i++) {
             if (arr[i] == element) return true;
