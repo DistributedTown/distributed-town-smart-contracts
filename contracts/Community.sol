@@ -41,11 +41,11 @@ contract Community is ERC1155, ERC1155Holder {
      * @param _transferredTokens the amount of transferred dito tokens on join
      **/
     event MemberAdded(
-        address _member,
+        address indexed _member,
         uint256 _skillWalletTokenId,
         uint256 _transferredTokens
     );
-    event MemberLeft(address _member);
+    event MemberLeft(address indexed _member);
 
     // add JSON Schema base URL
     constructor(
