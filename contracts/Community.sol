@@ -1,19 +1,17 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.6.10;
+pragma solidity ^0.7.4;
+pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-import "@opengsn/gsn/contracts/BaseRelayRecipient.sol";
-
-import "./ILendingPoolAddressesProvider.sol";
-import "./ILendingPool.sol";
-import "./IAtoken.sol";
-import "./IFiatTokenV2.sol";
-
-import "./DITOToken.sol";
-import "./WadRayMath.sol";
+import "./Membership.sol";
+import "./CommunitiesRegistry.sol";
+import "./CommonTypes.sol";
+import "./ISkillWallet.sol";
+import "./ERC1155.sol";
 
 /**
  * @title DistributedTown Community
@@ -21,272 +19,268 @@ import "./WadRayMath.sol";
  * @dev Implementation of the Community concept in the scope of the DistributedTown project
  * @author DistributedTown
  */
-contract Community is BaseRelayRecipient {
-    string public override versionRecipient = "2.0.0";
 
-    using SafeMath for uint256;
-    using WadRayMath for uint256;
+contract Community is ERC1155, ERC1155Holder {
+    enum TokenType {DiToCredit, Community}
+
+    Membership membership;
+    ISkillWallet skillWallet;
+
+    CommunitiesRegistry registry;
+
+    string public name;
+    uint256 public ownerId;
+    uint16 public activeMembersCount;
+    uint256 public scarcityScore;
+    mapping(uint256 => bool) public isMember;
+    uint256[] public skillWalletIds;
 
     /**
      * @dev emitted when a member is added
      * @param _member the user which just joined the community
      * @param _transferredTokens the amount of transferred dito tokens on join
      **/
-    event MemberAdded(address _member, uint256 _transferredTokens);
-    /**
-     * @dev emitted when a member leaves the community
-     * @param _member the user which just left the community
-     **/
-    event MemberRemoved(address _member);
+    event MemberAdded(
+        address indexed _member,
+        uint256 _skillWalletTokenId,
+        uint256 _transferredTokens
+    );
+    event MemberLeft(address indexed _member);
 
-    // The address of the DITOToken ERC20 contract instantiated on Community creation
-    DITOToken public tokens;
-
-    mapping(address => bool) public enabledMembers;
-    uint256 public numberOfMembers;
-    mapping(string => address) public depositableCurrenciesContracts;
-    mapping(string => address) public depositableACurrenciesContracts;
-    string[] public depositableCurrencies;
-
-    modifier onlyEnabledCurrency(string memory _currency) {
-        require(
-            depositableCurrenciesContracts[_currency] != address(0),
-            "The currency passed as an argument is not enabled, sorry!"
+    // add JSON Schema base URL
+    constructor(
+        string memory _url,
+        uint256 _ownerId,
+        uint256 _ownerCredits,
+        string memory _name,
+        Types.Template _template,
+        uint8 _positionalValue1,
+        uint8 _positionalValue2,
+        uint8 _positionalValue3,
+        address skillWalletAddress,
+        address communityRegistryAddress
+    ) public ERC1155(_url, communityRegistryAddress) {
+        skillWallet = ISkillWallet(skillWalletAddress);
+        registry = CommunitiesRegistry(communityRegistryAddress);
+        membership = new Membership(
+            _template,
+            _positionalValue1,
+            _positionalValue2,
+            _positionalValue3
         );
-        _;
-    }
-
-    // Get the forwarder address for the network
-    // you are using from
-    // https://docs.opengsn.org/gsn-provider/networks.html
-    // 0x25CEd1955423BA34332Ec1B60154967750a0297D is ropsten's one
-    constructor(address _forwarder) public {
-        trustedForwarder = _forwarder;
-
-        tokens = new DITOToken(96000 * 1e18);
-
-        depositableCurrencies.push("DAI");
-        depositableCurrencies.push("USDC");
-
-        depositableCurrenciesContracts["DAI"] = address(
-            0xf80A32A835F79D7787E8a8ee5721D0fEaFd78108
-        );
-        depositableCurrenciesContracts["USDC"] = address(
-            0x07865c6E87B9F70255377e024ace6630C1Eaa37F
-        );
-
-        depositableACurrenciesContracts["DAI"] = address(
-            0xcB1Fe6F440c49E9290c3eb7f158534c2dC374201
-        );
-    }
-
-    /**
-     * @dev makes the calling user join the community if required conditions are met
-     * @param _amountOfDITOToRedeem the amount of dito tokens for which this user is eligible
-     **/
-    function join(uint256 _amountOfDITOToRedeem) public {
-        require(numberOfMembers < 24, "There are already 24 members, sorry!");
-        require(enabledMembers[_msgSender()] == false, "You already joined!");
-
-        enabledMembers[_msgSender()] = true;
-        numberOfMembers = numberOfMembers + 1;
-        tokens.addToWhitelist(_msgSender());
-
-        tokens.transfer(_msgSender(), _amountOfDITOToRedeem * 1e18);
-
-        emit MemberAdded(_msgSender(), _amountOfDITOToRedeem);
-    }
-
-    /**
-     * @dev makes the calling user leave the community if required conditions are met
-     **/
-    function leave() public {
-        require(enabledMembers[_msgSender()] == true, "You didn't even join!");
-
-        enabledMembers[_msgSender()] = false;
-        numberOfMembers = numberOfMembers - 1;
-
-        // leaving user must first give allowance
-        // then can call this
-        tokens.transferFrom(
-            _msgSender(),
-            address(this),
-            tokens.balanceOf(_msgSender())
-        );
-
-        tokens.removeFromWhitelist(_msgSender());
-
-        emit MemberRemoved(_msgSender());
-    }
-
-    /**
-     * @dev makes the calling user deposit funds in the community if required conditions are met
-     * @param _amount number of currency which the user wants to deposit
-     * @param _currency currency the user wants to deposit (as of now only DAI and USDC)
-     * @param _optionalSignatureInfo abiEncoded data in order to make USDC2 gasless transactions
-     **/
-    function deposit(
-        uint256 _amount,
-        string memory _currency,
-        bytes memory _optionalSignatureInfo
-    ) public onlyEnabledCurrency(_currency) {
-        require(
-            enabledMembers[_msgSender()] == true,
-            "You can't deposit if you're not part of the community!"
-        );
-
-        address currencyAddress = address(
-            depositableCurrenciesContracts[_currency]
-        );
-        IERC20 currency = IERC20(currencyAddress);
-        require(
-            currency.balanceOf(_msgSender()) <= _amount * 1e18,
-            "You don't have enough funds to invest."
-        );
-
-        bytes32 currencyStringHash = keccak256(bytes(_currency));
-        uint256 amount = _amount * 1e18;
-
-        if (currencyStringHash == keccak256(bytes("DAI"))) {
-            currency.transferFrom(_msgSender(), address(this), amount);
-        } else if (currencyStringHash == keccak256(bytes("USDC"))) {
-            (
-                uint256 _validAfter,
-                uint256 _validBefore,
-                bytes32 _nonce,
-                uint8 _v,
-                bytes32 _r,
-                bytes32 _s
-            ) = abi.decode(
-                _optionalSignatureInfo,
-                (uint256, uint256, bytes32, uint8, bytes32, bytes32)
-            );
-
-            amount = _amount * 1e6;
-
-            IFiatTokenV2 usdcv2 = IFiatTokenV2(currencyAddress);
-
-            usdcv2.transferWithAuthorization(
-                _msgSender(),
-                address(this),
-                amount,
-                _validAfter,
-                _validBefore,
-                _nonce,
-                _v,
-                _r,
-                _s
-            );
+        name = _name;
+        if (registry.numOfCommunities() == 0) {
+            mintTokens();
+        } else {
+            mintTokens();
+            ownerId = _ownerId;
+            join(_ownerId, _ownerCredits);
         }
     }
 
-    /**
-     * @dev makes the calling user lend funds that are in the community contract into Aave if required conditions are met
-     * @param _amount number of currency which the user wants to lend
-     * @param _currency currency the user wants to deposit (as of now only DAI)
-     **/
-    function invest(uint256 _amount, string memory _currency)
-        public
-        onlyEnabledCurrency(_currency)
-    {
-        require(
-            enabledMembers[_msgSender()] == true,
-            "You can't invest if you're not part of the community!"
-        );
-        require(
-            keccak256(bytes(_currency)) != keccak256(bytes("USDC")),
-            "Gasless USDC is not implemented in Aave yet"
-        );
-
-        address currencyAddress = address(
-            depositableCurrenciesContracts[_currency]
-        );
-        IERC20 currency = IERC20(currencyAddress);
-
-        // Transfer currency
-        require(
-            currency.balanceOf(address(this)) <= _amount * 1e18,
-            "Amount to invest cannot be higher than deposited amount."
-        );
-
-        // Retrieve LendingPool address
-        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728)
-        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
-        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
-
-        uint256 amount = 10000000 * 1e18;
-        uint16 referral = 0;
-
-        // Approve LendingPool contract to move your DAI
-        currency.approve(provider.getLendingPoolCore(), amount);
-
-        // Deposit _amount DAI
-        lendingPool.deposit(currencyAddress, _amount * 1e18, referral);
+    function mintTokens() internal {
+        // Fungible DiToCredits ERC-20 token
+        _mint(address(this), uint256(TokenType.DiToCredit), 96000 * 1e4, "");
+        // Non-Fungible Community template NFT token
+        _mint(address(this), uint256(TokenType.Community), 1, "");
     }
 
-    /**
-     * @dev Returns the balance invested by the contract in Aave (invested + interest) and the APY
-     * @return investedBalance the aDai balance of the contract
-     * @return investedTokenAPY the median APY of invested balance
-     **/
-    function getInvestedBalanceInfo()
-        public
-        view
-        returns (uint256 investedBalance, uint256 investedTokenAPY)
-    {
-        address aDaiAddress = address(depositableACurrenciesContracts["DAI"]); // Ropsten aDAI
-
-        // Client has to convert to balanceOf / 1e18
-        uint256 _investedBalance = IAtoken(aDaiAddress).balanceOf(
-            address(this)
-        );
-
-        address daiAddress = address(depositableCurrenciesContracts["DAI"]);
-
-        // Retrieve LendingPool address
-        ILendingPoolAddressesProvider provider = ILendingPoolAddressesProvider(
-            address(0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728)
-        ); // Ropsten address, for other addresses: https://docs.aave.com/developers/developing-on-aave/deployed-contract-instances
-        ILendingPool lendingPool = ILendingPool(provider.getLendingPool());
-
-        // Client has to convert to balanceOf / 1e27
-        (, , , , uint256 daiLiquidityRate, , , , , , , , ) = lendingPool
-            .getReserveData(daiAddress);
-
-        return (_investedBalance, daiLiquidityRate);
-    }
-
-    /**
-     * @dev makes the calling user withdraw funds that are in Aave back into the community contract if required conditions are met
-     * @param _amount amount of currency which the user wants to withdraw
-     * @param _currency currency the user wants to deposit (as of now only DAI)
-     **/
-    function withdrawFromInvestment(uint256 _amount, string memory _currency)
-        public
-        onlyEnabledCurrency(_currency)
-    {
+    // check if it's called only from deployer.
+    function joinNewMember(
+        address newMemberAddress,
+        uint64 displayStringId1,
+        uint8 level1,
+        uint64 displayStringId2,
+        uint8 level2,
+        uint64 displayStringId3,
+        uint8 level3,
+        string calldata uri,
+        uint256 credits
+    ) public {
         require(
-            enabledMembers[_msgSender()] == true,
-            "You can't withdraw investment if you're not part of the community!"
-        );
-        require(
-            keccak256(bytes(_currency)) != keccak256(bytes("USDC")),
-            "Gasless USDC is not implemented in Aave yet"
+            activeMembersCount <= 24,
+            "There are already 24 members, sorry!"
         );
 
-        // Retrieve aCurrencyAddress
-        address aCurrencyAddress = address(
-            depositableACurrenciesContracts[_currency]
-        );
-        IAtoken aCurrency = IAtoken(aCurrencyAddress);
-
-        if (aCurrency.isTransferAllowed(address(this), _amount * 1e18) == false)
-            revert(
-                "Can't withdraw from investment, probably not enough liquidity on Aave."
+        Types.SkillSet memory skillSet =
+            Types.SkillSet(
+                Types.Skill(displayStringId1, level1),
+                Types.Skill(displayStringId2, level2),
+                Types.Skill(displayStringId3, level3)
             );
 
-        // Redeems _amount aCurrency
-        aCurrency.redeem(_amount * 1e18);
+        skillWallet.create(newMemberAddress, skillSet, uri);
+
+        uint256 tokenId = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
+
+        isMember[tokenId] = true;
+        skillWalletIds.push(tokenId);
+        activeMembersCount++;
+
+        // get the skills from chainlink
+        // transferToMember(newMemberAddress, credits);
+        emit MemberAdded(newMemberAddress, tokenId, credits);
+    }
+
+    function join(uint256 skillWalletTokenId, uint256 credits) public {
+        require(
+            activeMembersCount <= 24,
+            "There are already 24 members, sorry!"
+        );
+        require(!isMember[skillWalletTokenId], "You have already joined!");
+
+        address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
+
+        // require(
+        //     msg.sender == skillWalletAddress,
+        //     "Only the skill wallet owner can call this function"
+        // );
+
+        isMember[skillWalletTokenId] = true;
+        skillWalletIds.push(skillWalletTokenId);
+        activeMembersCount++;
+
+        transferToMember(skillWalletAddress, credits);
+        emit MemberAdded(skillWalletAddress, skillWalletTokenId, credits);
+    }
+
+    function leave(address memberAddress) public {
+        emit MemberLeft(memberAddress);
+    }
+
+    function getSkillWalletIds()
+        public
+        view
+        returns (uint256[] memory skillWalletIds)
+    {
+        return skillWalletIds;
+    }
+
+    function transferToMember(address _to, uint256 _value) public {
+        super.safeTransferFrom(address(this), _to, 0, _value, "");
+    }
+
+    function transferToCommunity(address _from, uint256 _value) public {
+        super.safeTransferFrom(_from, address(this), 0, _value, "");
+    }
+
+    function safeTransferFrom(
+        address _from,
+        address _to,
+        uint256 _id,
+        uint256 _value,
+        bytes calldata _data
+    ) public override {
+        require(
+            _id == uint256(TokenType.DiToCredit),
+            "Community NFT can't be trasfered"
+        );
+
+        super.safeTransferFrom(_from, _to, _id, _value, _data);
+    }
+
+    function safeBatchTransferFrom(
+        address _from,
+        address _to,
+        uint256[] calldata _ids,
+        uint256[] calldata _values,
+        bytes calldata _data
+    ) public override {
+        require(
+            !contains(_ids, uint256(TokenType.Community)),
+            "Community NFT can't be trasfered"
+        );
+
+        super.safeBatchTransferFrom(_from, _to, _ids, _values, _data);
+    }
+
+    function balanceOf(address _owner, uint256 _id)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        require(
+            _id == uint256(TokenType.DiToCredit),
+            "Community NFT doesn't have a balance."
+        );
+        super.balanceOf(_owner, _id);
+    }
+
+    function diToCreditsBalance(address _owner) public view returns (uint256) {
+        super.balanceOf(_owner, uint256(TokenType.DiToCredit));
+    }
+
+    function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids)
+        public
+        view
+        override
+        returns (uint256[] memory)
+    {
+        require(
+            !contains(_ids, uint256(TokenType.Community)),
+            "Community NFT can't be trasfered"
+        );
+
+        super.balanceOfBatch(_owners, _ids);
+    }
+
+    function setApprovalForAll(address _operator, bool _approved)
+        public
+        override
+    {
+        super.setApprovalForAll(_operator, _approved);
+    }
+
+    function isApprovedForAll(address _owner, address _operator)
+        public
+        view
+        override
+        returns (bool)
+    {
+        super.isApprovedForAll(_owner, _operator);
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC1155, ERC165)
+        returns (bool)
+    {
+        return
+            interfaceId == type(IERC1155).interfaceId ||
+            interfaceId == type(IERC1155MetadataURI).interfaceId ||
+            // || interfaceId == type(IERC1155Receiver).interfaceId
+            super.supportsInterface(interfaceId);
+    }
+
+    function getMembership() public view returns (Membership) {
+        return membership;
+    }
+
+    function getTemplate() public view returns (Types.Template) {
+        return membership.template();
+    }
+
+    function getPositionalValues() public view returns (uint16[3] memory) {
+        uint16 p1 = membership.positionalValues(1);
+        uint16 p2 = membership.positionalValues(2);
+        uint16 p3 = membership.positionalValues(3);
+        return [p1, p2, p3];
+    }
+
+    function contains(uint256[] memory arr, uint256 element)
+        internal
+        pure
+        returns (bool)
+    {
+        for (uint256 i = 0; i < arr.length; i++) {
+            if (arr[i] == element) return true;
+        }
+        return false;
     }
 }
