@@ -106,11 +106,7 @@ describe("DistributedTown", function () {
         const accounts = await ethers.getSigners();
         let userAddress = ethers.utils.getAddress(accounts[0].address);
         let credits = ethers.utils.parseEther("2006");
-        // let one_bn = ethers.BigNumber.from(1);
-        // let skill = [one_bn, one_bn]
-        // let skillSet = [skill, skill, skill];
-        const a = await communityRegistryInstance.joinNewMember(communities[0], 1, 1, 2, 2 ,3 ,3 , '', credits)
-        // console.log(a);
+        const a = await communityRegistryInstance.joinNewMember(communities[0], userAddress, 1, 1, 2, 2 ,3 ,3 , '', credits)
         const membersCount = await communityInstance.activeMembersCount()
         const isMember = await communityInstance.isMember(ethers.BigNumber.from(0))
         const skillWalletIds = await communityInstance.getSkillWalletIds();
@@ -122,8 +118,8 @@ describe("DistributedTown", function () {
         console.log(member.toString());
         expect(membersCount).to.eq(1);
         expect(isMember).to.be.true;
-        // expect(skillWalletIds).to.be.an('array');
-        // expect(skillWalletIds.length).to.eq(1);
+        expect(skillWalletIds).to.be.an('array');
+        expect(skillWalletIds.length).to.eq(1);
       });
     });
   });

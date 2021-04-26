@@ -102,8 +102,7 @@ contract Gigs {
     }
 
     function validate(uint256 _gigId, string calldata _gigHash)
-        private
-        returns (bool)
+        public
     {
         // Chainlink validate hash
         isValidated[_gigId] = true;
