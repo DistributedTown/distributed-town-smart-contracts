@@ -23,7 +23,7 @@ contract DITOCredit is ERC20, Ownable {
 
     constructor() ERC20("DiTo", "DITO") {
         whitelist[msg.sender] = true;
-        _mint(msg.sender, 96000 * 10^18);
+        _mint(msg.sender, 96000 * 1e18);
     }
 
     /**

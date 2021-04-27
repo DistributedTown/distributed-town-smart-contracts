@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./CommonTypes.sol";
 import "./DITOCredit.sol";
 import "./ISkillWallet.sol";
+
 /**
  * @title DistributedTown Community
  *
@@ -13,16 +14,14 @@ import "./ISkillWallet.sol";
  */
 
 contract Community {
-
     string public metadataUri;
-    uint256 public communityTokenId;
 
     uint256 public ownerId;
     uint16 public activeMembersCount;
     uint256 public scarcityScore;
     mapping(uint256 => bool) public isMember;
     uint256[] public skillWalletIds;
-    DITOCredit ditoCredit; 
+    DITOCredit ditoCredit;
     ISkillWallet skillWallet;
 
     /**
@@ -38,13 +37,11 @@ contract Community {
     event MemberLeft(address indexed _member);
 
     // add JSON Schema base URL
-    constructor(
-        string memory _url,
-        address skillWalletAddress
-    ) {
+    constructor(string memory _url, address skillWalletAddress) {
         skillWallet = ISkillWallet(skillWalletAddress);
         ditoCredit = new DITOCredit();
         metadataUri = _url;
+        activeMembersCount = 0;
     }
 
     // check if it's called only from deployer.
@@ -72,15 +69,16 @@ contract Community {
             );
 
         skillWallet.create(newMemberAddress, skillSet, uri);
-
         uint256 tokenId = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
 
-        isMember[tokenId] = true;
+        // get the skills from chainlink
+        ditoCredit.addToWhitelist(newMemberAddress);
+        ditoCredit.transfer(newMemberAddress, credits);
+
         skillWalletIds.push(tokenId);
+        isMember[tokenId] = true;
         activeMembersCount++;
 
-        // get the skills from chainlink
-        ditoCredit.transfer(newMemberAddress, credits);
         emit MemberAdded(newMemberAddress, tokenId, credits);
     }
 
@@ -99,14 +97,29 @@ contract Community {
         // );
 
         isMember[skillWalletTokenId] = true;
-        skillWalletIds.push(skillWalletTokenId);
+        skillWalletIds[activeMembersCount] = skillWalletTokenId;
+        skillWalletIds[1] = 123;
         activeMembersCount++;
 
+        ditoCredit.addToWhitelist(skillWalletAddress);
         ditoCredit.transfer(skillWalletAddress, credits);
+
         emit MemberAdded(skillWalletAddress, skillWalletTokenId, credits);
     }
 
     function leave(address memberAddress) public {
         emit MemberLeft(memberAddress);
+    }
+
+    // function getMembers() public view returns (uint256[25] memory members) {
+    //     uint256[25] memory members;
+    //     for (uint256 i = 0; i < activeMembersCount; i += 1) {
+    //         members[i] = skillWalletIds[i];
+    //     }
+    //     return members;
+    // }
+
+    function getMembers() public view returns (uint256[] memory) {
+        return skillWalletIds;
     }
 }

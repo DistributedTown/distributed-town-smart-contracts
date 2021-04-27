@@ -20,18 +20,18 @@ import "./Community.sol";
 
 contract DistributedTown is ERC1155, ERC1155Holder {
     event CommunityCreated(
-        address indexed creator,
-        uint256 template,
         address communityContract,
-        uint256 communityId
+        uint256 communityId,
+        uint256 template,
+        address indexed creator
     );
     using Counters for Counters.Counter;
 
-    Counters.Counter private communityTokenIds; // to keep track of the number of NFTs we have minted
+    Counters.Counter private communityTokenIds; 
 
-    mapping(uint256 => address) public nftToCommunityContract;
-    mapping(uint256 => uint256) public templateCommunities;
-    mapping(uint256 => Types.LatestSkills[]) public templateSkills;
+    mapping(address => uint256) public communityAddressToTokenID;
+    mapping(uint256 => uint256) public communityToTemplate;
+    address[] public communities;
 
     address private skillWalletAddress;
 
@@ -50,16 +50,17 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         uint256 newItemId = communityTokenIds.current();
 
         // check if skill wallet is active
-        templateCommunities[template] = newItemId;
         // TODO: add skill wallet address
         Community community = new Community(communityMetadata, skillWalletAddress);
-        nftToCommunityContract[newItemId] = address(community);
+        communityAddressToTokenID[address(community)] = newItemId;
+        communityToTemplate[newItemId] = template;
+        communities.push(address(community));
 
         emit CommunityCreated(
-            msg.sender,
-            template,
             address(community),
-            newItemId
+            newItemId,
+            template,
+            msg.sender
         );
     }
 
@@ -121,5 +122,9 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         returns (bool)
     {
         
+    }
+
+    function getCommunities() public view returns(address[] memory) {
+        return communities;
     }
 }

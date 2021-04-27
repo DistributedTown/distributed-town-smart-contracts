@@ -4,24 +4,26 @@ const { ethers } = require("hardhat");
 const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
-    const communityRegistryAddress = "0x32B2B4B7d6f1a93E959a0355Ae6BDB6CC1E9465c";
+    const communityRegistryAddress = "0x418822929529F7A16D61FdAebF6882B8813478d0";
 
     //
-    const communityRegistryFactory = await ethers.getContractFactory("CommunitiesRegistry");
+    const communityRegistryFactory = await ethers.getContractFactory("DistributedTown");
     const communityRegistryContract = await communityRegistryFactory.attach(communityRegistryAddress);
 
-    const community = await communityRegistryContract.createCommunity(
+    const tx = await communityRegistryContract.createCommunity(
         "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice",
-        0,
-        0,
-        'GenesisTown',
-        3,
-        6,
-        12,
-        24
+        0
     );
 
-    console.log("Community created", community);
+    const txReceipt = await tx.wait();
+    const communityCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'CommunityCreated');
+    const address = communityCreatedEvent.args[0];
+    const tokenId = communityCreatedEvent.args[1];
+    const template = communityCreatedEvent.args[2];
+
+    console.log('address', address);
+    console.log('tokenId', tokenId);
+    console.log('template', template);
 
 };
 
