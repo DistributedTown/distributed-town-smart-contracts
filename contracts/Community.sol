@@ -109,15 +109,7 @@ contract Community {
 
     function leave(address memberAddress) public {
         emit MemberLeft(memberAddress);
-    }
-
-    // function getMembers() public view returns (uint256[25] memory members) {
-    //     uint256[25] memory members;
-    //     for (uint256 i = 0; i < activeMembersCount; i += 1) {
-    //         members[i] = skillWalletIds[i];
-    //     }
-    //     return members;
-    // }
+    }   
 
     function getMembers() public view returns (uint256[] memory) {
         return skillWalletIds;

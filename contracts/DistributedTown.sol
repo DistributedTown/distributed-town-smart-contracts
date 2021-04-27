@@ -34,17 +34,24 @@ contract DistributedTown is ERC1155, ERC1155Holder {
     address[] public communities;
 
     address private skillWalletAddress;
+    ISkillWallet skillWallet;
 
     // TODO Add JSON Schema base URL
     constructor(string memory _url, address _skillWalletAddress) ERC1155(_url) {
         // initialize pos values of the 3 templates;
         skillWalletAddress = _skillWalletAddress;
+        skillWallet = ISkillWallet(_skillWalletAddress);
     }
 
     function createCommunity(string calldata communityMetadata, uint256 template)
         public
     {
         _mint(address(this), template, 1, "");
+
+        uint256 skillWalletId = skillWallet.getSkillWalletIdByOwner(msg.sender);
+        bool isActive = skillWallet.isSkillWalletActivated(skillWalletId);
+
+        require(isActive, 'Only an active skill wallet can create a community!');
 
         communityTokenIds.increment();
         uint256 newItemId = communityTokenIds.current();
