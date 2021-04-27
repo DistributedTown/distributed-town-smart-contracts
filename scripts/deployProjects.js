@@ -7,7 +7,7 @@ const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
 
-    const gigs = await deploy("Gigs");
+    const gigs = await deploy("Project");
 
 
     console.log(

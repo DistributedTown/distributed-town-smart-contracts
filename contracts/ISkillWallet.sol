@@ -39,8 +39,4 @@ interface ISkillWallet is IERC721 {
 
     function isSkillWalletActivated(uint256 skillWalletId) external view returns (bool status);
 
-    function getSkillSet(uint256 skillWalletId) external view returns (Types.SkillSet memory skillSet);
-
-    function isSkillWalletActivated(uint256 skillWalletId) external view returns (bool status);
-
 }

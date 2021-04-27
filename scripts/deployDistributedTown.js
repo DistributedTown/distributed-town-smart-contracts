@@ -10,7 +10,7 @@ const main = async () => {
 
     console.log("\n\n 📡 Deploying...\n");
 
-    const communityRegistry = await deploy("CommunitiesRegistry", [skillWalletAddress]);
+    const distributedTown = await deploy("DistributedTown", ['', skillWalletAddress]);
 
     console.log(
         " 💾  Artifacts (address, abi, and args) saved to: ",

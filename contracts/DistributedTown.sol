@@ -33,9 +33,12 @@ contract DistributedTown is ERC1155, ERC1155Holder {
     mapping(uint256 => uint256) public templateCommunities;
     mapping(uint256 => Types.LatestSkills[]) public templateSkills;
 
+    address private skillWalletAddress;
+
     // TODO Add JSON Schema base URL
-    constructor(string memory _url) ERC1155(_url) {
+    constructor(string memory _url, address _skillWalletAddress) ERC1155(_url) {
         // initialize pos values of the 3 templates;
+        skillWalletAddress = _skillWalletAddress;
     }
 
     function createCommunity(string calldata communityMetadata, uint256 template)
@@ -49,7 +52,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         // check if skill wallet is active
         templateCommunities[template] = newItemId;
         // TODO: add skill wallet address
-        Community community = new Community(communityMetadata, address(0));
+        Community community = new Community(communityMetadata, skillWalletAddress);
         nftToCommunityContract[newItemId] = address(community);
 
         emit CommunityCreated(

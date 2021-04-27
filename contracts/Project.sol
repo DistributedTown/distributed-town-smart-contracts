@@ -22,8 +22,8 @@ contract Project is IERC721Metadata, ERC721 {
     mapping(uint256 => address) tokenIdToCommunity;
     mapping(uint256 => uint256) tokenIdToTemplate;
 
-    constructor(string memory _name, string memory _symbol)
-        ERC721(_name, _symbol)
+    constructor()
+        ERC721("DiToProject", 'DITOPRJ')
     {}
 
     function createProject(string memory _props, uint256 template) public {
