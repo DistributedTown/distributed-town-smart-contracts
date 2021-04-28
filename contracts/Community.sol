@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./CommonTypes.sol";
 import "./DITOCredit.sol";
 import "./ISkillWallet.sol";
+import "./Treasury.sol";
 
 /**
  * @title DistributedTown Community
@@ -23,6 +24,7 @@ contract Community {
     uint256[] public skillWalletIds;
     DITOCredit ditoCredit;
     ISkillWallet skillWallet;
+    Treasury treasury;
 
     /**
      * @dev emitted when a member is added
@@ -41,7 +43,11 @@ contract Community {
         skillWallet = ISkillWallet(skillWalletAddress);
         ditoCredit = new DITOCredit();
         metadataUri = _url;
-        activeMembersCount = 0;
+
+        treasury = new Treasury();
+        activeMembersCount = 1;
+        ditoCredit.addToWhitelist(address(treasury));
+        ditoCredit.transfer(address(treasury), 2006 * 1e18);
     }
 
     // check if it's called only from deployer.
@@ -109,9 +115,15 @@ contract Community {
 
     function leave(address memberAddress) public {
         emit MemberLeft(memberAddress);
-    }   
+    }
 
     function getMembers() public view returns (uint256[] memory) {
         return skillWalletIds;
+    }
+
+    // check called only by milestones!
+    function transferToTreasury(uint256 amount) public {
+        ditoCredit.transfer(address(treasury), amount);
+        treasury.returnCreditsIfThresholdReached();
     }
 }
