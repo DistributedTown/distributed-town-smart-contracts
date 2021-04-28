@@ -12,9 +12,14 @@ import "./DITOCredit.sol";
  */
 
 contract Treasury {
-    DITOCredit ditoCredits;
-    address communityAddress;
+    DITOCredit private ditoCredits;
+    address private communityAddress;
 
+    constructor(address ditoCreditsAddress) {
+        ditoCredits = DITOCredit(ditoCreditsAddress);
+        communityAddress = msg.sender;
+    }
+    
     function returnCreditsIfThresholdReached(uint256 amount) public {
         uint256 balance = ditoCredit.balanceOf(address(this));
         uint256 threshold = 3840 * 1e18;

@@ -44,7 +44,7 @@ contract Community {
         ditoCredit = new DITOCredit();
         metadataUri = _url;
 
-        treasury = new Treasury();
+        treasury = new Treasury(address(ditoCredit));
         activeMembersCount = 1;
         ditoCredit.addToWhitelist(address(treasury));
         ditoCredit.transfer(address(treasury), 2006 * 1e18);
