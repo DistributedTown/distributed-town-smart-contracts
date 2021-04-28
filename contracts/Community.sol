@@ -5,6 +5,8 @@ pragma experimental ABIEncoderV2;
 import "./CommonTypes.sol";
 import "./DITOCredit.sol";
 import "./ISkillWallet.sol";
+import "./IMilestones.sol";
+import "./Milestones.sol";
 
 /**
  * @title DistributedTown Community
@@ -23,6 +25,7 @@ contract Community {
     uint256[] public skillWalletIds;
     DITOCredit ditoCredit;
     ISkillWallet skillWallet;
+    IMilestones milestones;
 
     /**
      * @dev emitted when a member is added
@@ -36,12 +39,19 @@ contract Community {
     );
     event MemberLeft(address indexed _member);
 
+    modifier onlyMilestones() {
+        require(msg.sender == address(milestones), 'Only Milestones can call this function.');
+        _;
+    }
     // add JSON Schema base URL
     constructor(string memory _url, address skillWalletAddress) {
         skillWallet = ISkillWallet(skillWalletAddress);
         ditoCredit = new DITOCredit();
+        milestones = new Milestones();
         metadataUri = _url;
-        activeMembersCount = 0;
+
+        ditoCredit.addToWhitelist(address(milestones));
+        ditoCredit.transfer(address(milestones), 2006 * 1e18);
     }
 
     // check if it's called only from deployer.
@@ -57,7 +67,7 @@ contract Community {
         uint256 credits
     ) public {
         require(
-            activeMembersCount <= 24,
+            activeMembersCount <= 25,
             "There are already 24 members, sorry!"
         );
 
@@ -113,5 +123,9 @@ contract Community {
 
     function getMembers() public view returns (uint256[] memory) {
         return skillWalletIds;
+    }
+
+    function approveMilestoneDiToTransfer(uint256 diToCredits) public onlyMilestones { 
+        ditoCredit.approve(address(milestones), diToCredits);
     }
 }
