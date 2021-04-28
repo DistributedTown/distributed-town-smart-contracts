@@ -1,3 +1,5 @@
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.7.4;
 
 library Types {
     struct SkillSet {
@@ -14,5 +16,10 @@ library Types {
         Art, 
         Local,
         Other
+    }
+
+    struct LatestSkills {
+        uint8 posValue;
+        uint256 categoryID;
     }
 }
