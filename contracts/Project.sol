@@ -21,6 +21,7 @@ contract Project is IERC721Metadata, ERC721 {
     mapping(address => uint256) communityToTokenId;
     mapping(uint256 => address) tokenIdToCommunity;
     mapping(uint256 => uint256) tokenIdToTemplate;
+    address[] members;
 
     constructor()
         ERC721("DiToProject", 'DITOPRJ')
@@ -38,5 +39,10 @@ contract Project is IERC721Metadata, ERC721 {
         tokenIdToTemplate[newProjectId] = template;
 
         emit ProjectCreated(newProjectId, template, msg.sender);
+    }
+
+    function joinProject() public {
+        // TODO: verify skill wallet
+        members.push(msg.sender);
     }
 }
