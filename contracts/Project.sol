@@ -18,9 +18,9 @@ contract Project is IERC721Metadata, ERC721 {
     using Counters for Counters.Counter;
 
     Counters.Counter private projectId;
+
     mapping(address => uint256) communityToTokenId;
-    mapping(uint256 => address) tokenIdToCommunity;
-    mapping(uint256 => uint256) tokenIdToTemplate;
+    mapping(uint256 => uint256[]) templateProjects;
     address[] members;
 
     constructor()
@@ -29,14 +29,14 @@ contract Project is IERC721Metadata, ERC721 {
 
     function createProject(string memory _props, uint256 template) public {
         uint256 newProjectId = projectId.current();
+        projectId.increment();
 
         // msg.sender -> Community.sol
         _mint(msg.sender, newProjectId);
         _setTokenURI(newProjectId, _props);
 
         communityToTokenId[msg.sender] = newProjectId;
-        tokenIdToCommunity[newProjectId] = msg.sender;
-        tokenIdToTemplate[newProjectId] = template;
+        templateProjects[template] = newProjectId;
 
         emit ProjectCreated(newProjectId, template, msg.sender);
     }
