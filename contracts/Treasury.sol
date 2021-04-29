@@ -21,10 +21,10 @@ contract Treasury {
     }
 
     function returnCreditsIfThresholdReached() public {
-        uint256 balance = ditoCredit.balanceOf(address(this));
+        uint256 balance = ditoCredits.balanceOf(address(this));
         uint256 threshold = 3840 * 1e18;
         if (balance >= threshold) {
-            ditoCredit.transfer(communityAddress, balance - 2006 * 1e18);
+            ditoCredits.transfer(communityAddress, balance - 2006 * 1e18);
         }
     }
 }

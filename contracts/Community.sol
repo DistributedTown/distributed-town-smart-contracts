@@ -22,6 +22,7 @@ contract Community {
     uint256 public scarcityScore;
     mapping(uint256 => bool) public isMember;
     uint256[] public skillWalletIds;
+
     DITOCredit ditoCredit;
     ISkillWallet skillWallet;
     Treasury treasury;
@@ -46,16 +47,9 @@ contract Community {
         ditoCredit = new DITOCredit();
         treasury = new Treasury(address(ditoCredit));
 
-        skillWallet.create(address(treasury), skillSet, uri);
-        uint256 tokenId = skillWallet.getSkillWalletIdByOwner(address(treasury));
-
-        // get the skills from chainlink
-        ditoCredit.addToWhitelist(address(treasury));
-        ditoCredit.transfer(address(treasury), 2006 * 1e18);
-
-        activeMembersCount = 1;
-        skillWalletIds.push(tokenId);
-        isMember[tokenId] = true;
+        // TODO: default skills value
+        // TODO: replace the community template uri with the treasury one
+        joinNewMember(address(treasury), 0, 0, 0, 0, 0, 0, _url, 2006 * 1e18);
     }
 
     // check if it's called only from deployer.
@@ -67,7 +61,7 @@ contract Community {
         uint8 level2,
         uint64 displayStringId3,
         uint8 level3,
-        string calldata uri,
+        string memory uri,
         uint256 credits
     ) public {
         require(
