@@ -40,14 +40,22 @@ contract Community {
 
     // add JSON Schema base URL
     constructor(string memory _url, address skillWalletAddress) {
-        skillWallet = ISkillWallet(skillWalletAddress);
-        ditoCredit = new DITOCredit();
         metadataUri = _url;
 
+        skillWallet = ISkillWallet(skillWalletAddress);
+        ditoCredit = new DITOCredit();
         treasury = new Treasury(address(ditoCredit));
-        activeMembersCount = 1;
+
+        skillWallet.create(address(treasury), skillSet, uri);
+        uint256 tokenId = skillWallet.getSkillWalletIdByOwner(address(treasury));
+
+        // get the skills from chainlink
         ditoCredit.addToWhitelist(address(treasury));
         ditoCredit.transfer(address(treasury), 2006 * 1e18);
+
+        activeMembersCount = 1;
+        skillWalletIds.push(tokenId);
+        isMember[tokenId] = true;
     }
 
     // check if it's called only from deployer.
@@ -121,7 +129,7 @@ contract Community {
         return skillWalletIds;
     }
 
-    // check called only by milestones!
+    // TODO: check called only by milestones!
     function transferToTreasury(uint256 amount) public {
         ditoCredit.transfer(address(treasury), amount);
         treasury.returnCreditsIfThresholdReached();
