@@ -20,9 +20,10 @@ contract Project is IERC721Metadata, ERC721 {
 
     Counters.Counter private projectId;
 
-    mapping(address => uint256) communityToTokenId;
+    mapping(address => uint256[]) communityToTokenId;
     mapping(uint256 => uint256[]) templateProjects;
-    address[] members;
+    mapping(uint256 => uint256[]) members;
+
     ProjectTreasury projectTreasury;
 
     constructor()
@@ -31,26 +32,29 @@ contract Project is IERC721Metadata, ERC721 {
         projectTreasury = new ProjectTreasury();
     }
 
-    function createProject(string memory _props, uint256 template) public {
+    function createProject(string memory _props, uint256 template, address communityAddress) public {
         uint256 newProjectId = projectId.current();
         projectId.increment();
 
-        // msg.sender -> Community.sol
-        _mint(msg.sender, newProjectId);
+        _mint(communityAddress, newProjectId);
         _setTokenURI(newProjectId, _props);
 
-        communityToTokenId[msg.sender] = newProjectId;
+        communityToTokenId[communityAddress].push(newProjectId);
         templateProjects[template].push(newProjectId);
 
-        emit ProjectCreated(newProjectId, template, msg.sender);
+        emit ProjectCreated(newProjectId, template, communityAddress);
     }
 
-    function joinProject() public {
-        // TODO: verify skill wallet
-        members.push(msg.sender);
-    }
+    // function joinProject() public {
+    //     // TODO: verify skill wallet
+    //     members.push(msg.sender);
+    // }
 
     function getProjectTreasuryAddress() public view returns(address) {
         return address(projectTreasury);
+    }
+
+    function getCommunityProjects(address communityAddress) public view returns(uint256[] memory projectIds) {
+        return communityToTokenId[communityAddress];
     }
 }
