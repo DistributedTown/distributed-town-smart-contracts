@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./CommonTypes.sol";
 import "./DITOCredit.sol";
 import "./ISkillWallet.sol";
+import "./Treasury.sol";
 
 /**
  * @title DistributedTown Community
@@ -21,8 +22,10 @@ contract Community {
     uint256 public scarcityScore;
     mapping(uint256 => bool) public isMember;
     uint256[] public skillWalletIds;
+
     DITOCredit ditoCredit;
     ISkillWallet skillWallet;
+    Treasury treasury;
 
     /**
      * @dev emitted when a member is added
@@ -38,10 +41,15 @@ contract Community {
 
     // add JSON Schema base URL
     constructor(string memory _url, address skillWalletAddress) {
+        metadataUri = _url;
+
         skillWallet = ISkillWallet(skillWalletAddress);
         ditoCredit = new DITOCredit();
-        metadataUri = _url;
-        activeMembersCount = 0;
+        treasury = new Treasury(address(ditoCredit));
+
+        // TODO: default skills value
+        // TODO: replace the community template uri with the treasury one
+        joinNewMember(address(treasury), 0, 0, 0, 0, 0, 0, _url, 2006 * 1e18);
     }
 
     // check if it's called only from deployer.
@@ -53,7 +61,7 @@ contract Community {
         uint8 level2,
         uint64 displayStringId3,
         uint8 level3,
-        string calldata uri,
+        string memory uri,
         uint256 credits
     ) public {
         require(
@@ -109,9 +117,15 @@ contract Community {
 
     function leave(address memberAddress) public {
         emit MemberLeft(memberAddress);
-    }   
+    }
 
     function getMembers() public view returns (uint256[] memory) {
         return skillWalletIds;
+    }
+
+    // TODO: check called only by milestones!
+    function transferToTreasury(uint256 amount) public {
+        ditoCredit.transfer(address(treasury), amount);
+        treasury.returnCreditsIfThresholdReached();
     }
 }

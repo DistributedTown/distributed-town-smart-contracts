@@ -6,10 +6,7 @@ use(solidity);
 
 describe("DistributedTown", function () {
 
-  let communityRegistryInstance;
   let skillWalletInstance;
-  let gigsInstance;
-  let communityInstance;
   let provider;
   let accounts;
   let account0;
