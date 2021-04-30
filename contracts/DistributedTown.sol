@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155MetadataURI.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./Community.sol";
+import "./ISkillWallet.sol";
 
 /**
  * @title DistributedTown Community
@@ -48,10 +49,14 @@ contract DistributedTown is ERC1155, ERC1155Holder {
     {
         _mint(address(this), template, 1, "");
 
+        bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
+        require(isRegistered, 'Only a registered skill wallet can create a community.');
+
         uint256 skillWalletId = skillWallet.getSkillWalletIdByOwner(msg.sender);
         bool isActive = skillWallet.isSkillWalletActivated(skillWalletId);
+        require(isActive, 'Only an active skill wallet can create a community.');
 
-        require(isActive, 'Only an active skill wallet can create a community!');
+        // TODO: add check for validated skills;
 
         communityTokenIds.increment();
         uint256 newItemId = communityTokenIds.current();
