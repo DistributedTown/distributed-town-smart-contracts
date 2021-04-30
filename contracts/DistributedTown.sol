@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155MetadataURI.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./Community.sol";
 import "./ISkillWallet.sol";
@@ -36,18 +36,19 @@ contract DistributedTown is ERC1155, ERC1155Holder {
 
     address private skillWalletAddress;
     ISkillWallet skillWallet;
+    bool genesisCommunitiesCreated;
 
     // TODO Add JSON Schema base URL
     constructor(string memory _url, address _skillWalletAddress) ERC1155(_url) {
         // initialize pos values of the 3 templates;
         skillWalletAddress = _skillWalletAddress;
         skillWallet = ISkillWallet(_skillWalletAddress);
+        genesisCommunitiesCreated = false;
     }
 
     function createCommunity(string calldata communityMetadata, uint256 template)
         public
     {
-        _mint(address(this), template, 1, "");
 
         bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
         require(isRegistered, 'Only a registered skill wallet can create a community.');
@@ -57,6 +58,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         require(isActive, 'Only an active skill wallet can create a community.');
 
         // TODO: add check for validated skills;
+        _mint(address(this), template, 1, "");
 
         communityTokenIds.increment();
         uint256 newItemId = communityTokenIds.current();
@@ -68,6 +70,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         communityToTemplate[newItemId] = template;
         communities.push(address(community));
 
+        //TODO: add the creator as a community member
         emit CommunityCreated(
             address(community),
             newItemId,
@@ -138,5 +141,49 @@ contract DistributedTown is ERC1155, ERC1155Holder {
 
     function getCommunities() public view returns(address[] memory) {
         return communities;
+    }
+
+    function deployGenesisCommunities() public {
+
+        require(!genesisCommunitiesCreated, 'Genesis communities can be created only once');
+        
+        string memory artMetadata = '';
+        string memory localMetadata = '';
+        string memory openSourceMetadata = '';
+        // check if skill wallet is active
+        // TODO: add skill wallet address
+        communityTokenIds.increment();
+        uint256 newItemId = communityTokenIds.current();
+        _mint(address(this), 0, 1, "");
+        Community openSourceCommunity = new Community(openSourceMetadata, skillWalletAddress);
+        communityAddressToTokenID[address(openSourceCommunity)] = newItemId;
+        communityToTemplate[newItemId] = 0;
+        communities.push(address(openSourceCommunity));
+
+
+        communityTokenIds.increment();
+        newItemId = communityTokenIds.current();
+        _mint(address(this), 1, 1, "");
+        Community artCommunity = new Community(artMetadata, skillWalletAddress);
+        communityAddressToTokenID[address(artCommunity)] = newItemId;
+        communityToTemplate[newItemId] = 1;
+        communities.push(address(artCommunity));
+
+
+        communityTokenIds.increment();
+        newItemId = communityTokenIds.current();
+        _mint(address(this), 2, 1, "");
+        Community localCommunity = new Community(localMetadata, skillWalletAddress);
+        communityAddressToTokenID[address(localCommunity)] = newItemId;
+        communityToTemplate[newItemId] = 2;
+        communities.push(address(localCommunity));
+
+        genesisCommunitiesCreated = true;
+        emit CommunityCreated(
+            address(localCommunity),
+            newItemId,
+            2,
+            msg.sender
+        );
     }
 }
