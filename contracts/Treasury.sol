@@ -15,6 +15,7 @@ import "./DITOCredit.sol";
 contract Treasury is IERC721Receiver {
     DITOCredit private ditoCredits;
     address private communityAddress;
+    uint256 private constant THREASHOLD = 3840 * 1e18;
 
     constructor(address ditoCreditsAddress) {
         ditoCredits = DITOCredit(ditoCreditsAddress);
@@ -23,9 +24,8 @@ contract Treasury is IERC721Receiver {
 
     function returnCreditsIfThresholdReached() public {
         uint256 balance = ditoCredits.balanceOf(address(this));
-        uint256 threshold = 3840 * 1e18;
-        if (balance >= threshold) {
-            ditoCredits.transfer(communityAddress, balance - 2006 * 1e18);
+        if (balance >= THREASHOLD) {
+            ditoCredits.transfer(communityAddress, balance - 2000 * 1e18);
         }
     }
 

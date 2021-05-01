@@ -7,6 +7,7 @@ import "./DITOCredit.sol";
 import "./ISkillWallet.sol";
 import "./Treasury.sol";
 import "./DistributedTown.sol";
+import "./Projects.sol";
 
 /**
  * @title DistributedTown Community
@@ -21,7 +22,7 @@ contract Community {
     uint256 public ownerId;
     uint16 public activeMembersCount;
     uint256 public scarcityScore;
-    mapping(uint256 => bool) public isMember;
+    mapping(address => bool) public isMember;
     uint256[] public skillWalletIds;
     uint256 public tokenId;
 
@@ -29,6 +30,8 @@ contract Community {
     ISkillWallet skillWallet;
     Treasury treasury;
     DistributedTown distributedTown;
+    Projects projects;
+    uint256[] projectIds;
 
     /**
      * @dev emitted when a member is added
@@ -43,13 +46,18 @@ contract Community {
     event MemberLeft(address indexed _member);
 
     // add JSON Schema base URL
-    constructor(string memory _url, address _skillWalletAddress) {
+    constructor(
+        string memory _url,
+        address _skillWalletAddress,
+        address _projectsAddress
+    ) {
         metadataUri = _url;
 
         skillWallet = ISkillWallet(_skillWalletAddress);
         ditoCredit = new DITOCredit();
         treasury = new Treasury(address(ditoCredit));
         distributedTown = DistributedTown(address(msg.sender));
+        projects = Projects(_projectsAddress);
 
         // TODO: default skills value
         // TODO: replace the community template uri with the treasury one
@@ -88,7 +96,7 @@ contract Community {
         ditoCredit.transfer(newMemberAddress, credits);
 
         skillWalletIds.push(tokenId);
-        isMember[tokenId] = true;
+        isMember[newMemberAddress] = true;
         activeMembersCount++;
 
         emit MemberAdded(newMemberAddress, tokenId, credits);
@@ -99,16 +107,16 @@ contract Community {
             activeMembersCount <= 24,
             "There are already 24 members, sorry!"
         );
-        require(!isMember[skillWalletTokenId], "You have already joined!");
-
         address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
+
+        require(!isMember[skillWalletAddress], "You have already joined!");
 
         // require(
         //     msg.sender == skillWalletAddress,
         //     "Only the skill wallet owner can call this function"
         // );
 
-        isMember[skillWalletTokenId] = true;
+        isMember[skillWalletAddress] = true;
         skillWalletIds[activeMembersCount] = skillWalletTokenId;
         skillWalletIds[1] = 123;
         activeMembersCount++;
@@ -134,13 +142,32 @@ contract Community {
     }
 
     function getTokenId() public view returns (uint256) {
-        uint256 tokenId = distributedTown.communityAddressToTokenID(address(this));
+        uint256 tokenId =
+            distributedTown.communityAddressToTokenID(address(this));
         return tokenId;
     }
 
     function getTemplate() public view returns (uint256) {
-        uint256 tokenId = distributedTown.communityAddressToTokenID(address(this));
+        uint256 tokenId =
+            distributedTown.communityAddressToTokenID(address(this));
         uint256 templateId = distributedTown.communityToTemplate(tokenId);
         return templateId;
+    }
+
+    function getTreasuryBalance() public view returns (uint256) {
+        return ditoCredit.balanceOf(address(treasury));
+    }
+
+    function getProjects() public view returns (uint256[] memory) {
+        return projectIds;
+    }
+
+    // Called only by project (or create project from Community.sol (better))
+    function addProjectId(uint256 projectId) public {
+        projectIds.push(projectId);
+    }
+
+    function getProjectTreasuryAddress(uint256 projectId) public view returns(address){
+        return projects.getProjectTreasuryAddress(projectId);
     }
 }

@@ -33,17 +33,19 @@ contract DistributedTown is ERC1155, ERC1155Holder {
     mapping(address => uint256) public communityAddressToTokenID;
     mapping(uint256 => uint256) public communityToTemplate;
     address[] public communities;
+    address projectsAddress;
 
     address private skillWalletAddress;
     ISkillWallet skillWallet;
     bool genesisCommunitiesCreated;
 
     // TODO Add JSON Schema base URL
-    constructor(string memory _url, address _skillWalletAddress) ERC1155(_url) {
+    constructor(string memory _url, address _skillWalletAddress, address _projectsAddress) ERC1155(_url) {
         // initialize pos values of the 3 templates;
         skillWalletAddress = _skillWalletAddress;
         skillWallet = ISkillWallet(_skillWalletAddress);
         genesisCommunitiesCreated = false;
+        projectsAddress = _projectsAddress;
     }
 
     function createCommunity(string calldata communityMetadata, uint256 template)
@@ -65,7 +67,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
 
         // check if skill wallet is active
         // TODO: add skill wallet address
-        Community community = new Community(communityMetadata, skillWalletAddress);
+        Community community = new Community(communityMetadata, skillWalletAddress, projectsAddress);
         communityAddressToTokenID[address(community)] = newItemId;
         communityToTemplate[newItemId] = template;
         communities.push(address(community));
@@ -155,7 +157,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         communityTokenIds.increment();
         uint256 newItemId = communityTokenIds.current();
         _mint(address(this), 0, 1, "");
-        Community openSourceCommunity = new Community(openSourceMetadata, skillWalletAddress);
+        Community openSourceCommunity = new Community(openSourceMetadata, skillWalletAddress, projectsAddress);
         communityAddressToTokenID[address(openSourceCommunity)] = newItemId;
         communityToTemplate[newItemId] = 0;
         communities.push(address(openSourceCommunity));
@@ -164,7 +166,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         communityTokenIds.increment();
         newItemId = communityTokenIds.current();
         _mint(address(this), 1, 1, "");
-        Community artCommunity = new Community(artMetadata, skillWalletAddress);
+        Community artCommunity = new Community(artMetadata, skillWalletAddress, projectsAddress);
         communityAddressToTokenID[address(artCommunity)] = newItemId;
         communityToTemplate[newItemId] = 1;
         communities.push(address(artCommunity));
@@ -173,7 +175,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         communityTokenIds.increment();
         newItemId = communityTokenIds.current();
         _mint(address(this), 2, 1, "");
-        Community localCommunity = new Community(localMetadata, skillWalletAddress);
+        Community localCommunity = new Community(localMetadata, skillWalletAddress, projectsAddress);
         communityAddressToTokenID[address(localCommunity)] = newItemId;
         communityToTemplate[newItemId] = 2;
         communities.push(address(localCommunity));

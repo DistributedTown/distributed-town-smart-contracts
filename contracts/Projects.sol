@@ -11,7 +11,7 @@ import "./ProjectTreasury.sol";
 import "./Community.sol";
 import "./ISkillWallet.sol";
 
-contract Project is IERC721Metadata, ERC721 {
+contract Projects is IERC721Metadata, ERC721 {
     event ProjectCreated(
         uint256 projectId,
         uint256 template,
@@ -25,15 +25,13 @@ contract Project is IERC721Metadata, ERC721 {
     mapping(address => uint256[]) communityToTokenId;
     mapping(uint256 => uint256[]) templateProjects;
     mapping(uint256 => uint256[]) members;
-
-    ProjectTreasury projectTreasury;
+    mapping(uint256 => address) public projectToTreasury;
     ISkillWallet skillWallet;
     
 
     constructor(address _skillWalletAddress)
         ERC721("DiToProject", 'DITOPRJ')
     {
-        projectTreasury = new ProjectTreasury();
         skillWallet = ISkillWallet(_skillWalletAddress);
     }
 
@@ -47,7 +45,7 @@ contract Project is IERC721Metadata, ERC721 {
         bool isActive = skillWallet.isSkillWalletActivated(skillWalletId);
         require(isActive, 'Only an active skill wallet can create a project.');
 
-        bool isMember = community.isMember(skillWalletId);
+        bool isMember = community.isMember(creator);
         require(isMember, 'Only a member of the community can create a project.');
 
         uint256 template = community.getTemplate();
@@ -58,14 +56,18 @@ contract Project is IERC721Metadata, ERC721 {
         _mint(creator, newProjectId);
         _setTokenURI(newProjectId, _props);
 
+        community.addProjectId(newProjectId);
+        projectToTreasury[newProjectId] = address(new ProjectTreasury());
+
         communityToTokenId[_communityAddress].push(newProjectId);
         templateProjects[template].push(newProjectId);
 
         emit ProjectCreated(newProjectId, template, _communityAddress);
     }
 
-    function getProjectTreasuryAddress() public view returns(address) {
-        return address(projectTreasury);
+    // TODO: check if the community is calling this function
+    function getProjectTreasuryAddress(uint256 projectId) public view returns(address) {
+        return projectToTreasury[projectId];
     }
 
     function getCommunityProjects(address communityAddress) public view returns(uint256[] memory projectIds) {
