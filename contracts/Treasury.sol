@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.7.4;
-pragma experimental ABIEncoderV2;
+
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import "./DITOCredit.sol";
 
@@ -11,7 +12,7 @@ import "./DITOCredit.sol";
  * @author DistributedTown
  */
 
-contract Treasury {
+contract Treasury is IERC721Receiver {
     DITOCredit private ditoCredits;
     address private communityAddress;
 
@@ -26,5 +27,19 @@ contract Treasury {
         if (balance >= threshold) {
             ditoCredits.transfer(communityAddress, balance - 2006 * 1e18);
         }
+    }
+
+    /**
+     * @dev See {IERC721Receiver-onERC721Received}.
+     *
+     * Always returns `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

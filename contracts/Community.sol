@@ -6,6 +6,7 @@ import "./CommonTypes.sol";
 import "./DITOCredit.sol";
 import "./ISkillWallet.sol";
 import "./Treasury.sol";
+import "./DistributedTown.sol";
 
 /**
  * @title DistributedTown Community
@@ -22,10 +23,12 @@ contract Community {
     uint256 public scarcityScore;
     mapping(uint256 => bool) public isMember;
     uint256[] public skillWalletIds;
+    uint256 public tokenId;
 
     DITOCredit ditoCredit;
     ISkillWallet skillWallet;
     Treasury treasury;
+    DistributedTown distributedTown;
 
     /**
      * @dev emitted when a member is added
@@ -40,12 +43,13 @@ contract Community {
     event MemberLeft(address indexed _member);
 
     // add JSON Schema base URL
-    constructor(string memory _url, address skillWalletAddress) {
+    constructor(string memory _url, address _skillWalletAddress) {
         metadataUri = _url;
 
-        skillWallet = ISkillWallet(skillWalletAddress);
+        skillWallet = ISkillWallet(_skillWalletAddress);
         ditoCredit = new DITOCredit();
         treasury = new Treasury(address(ditoCredit));
+        distributedTown = DistributedTown(address(msg.sender));
 
         // TODO: default skills value
         // TODO: replace the community template uri with the treasury one
@@ -127,5 +131,16 @@ contract Community {
     function transferToTreasury(uint256 amount) public {
         ditoCredit.transfer(address(treasury), amount);
         treasury.returnCreditsIfThresholdReached();
+    }
+
+    function getTokenId() public view returns (uint256) {
+        uint256 tokenId = distributedTown.communityAddressToTokenID(address(this));
+        return tokenId;
+    }
+
+    function getTemplate() public view returns (uint256) {
+        uint256 tokenId = distributedTown.communityAddressToTokenID(address(this));
+        uint256 templateId = distributedTown.communityToTemplate(tokenId);
+        return templateId;
     }
 }

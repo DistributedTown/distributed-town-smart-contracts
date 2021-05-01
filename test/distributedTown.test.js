@@ -32,25 +32,10 @@ describe("DistributedTown", function () {
 
     distributedTownInstance = await DistributedTownFactory.deploy('http://someurl.co', skillWalletInstance.address);
     await distributedTownInstance.deployed();
+    await distributedTownInstance.deployGenesisCommunities();
 
-    projectsInstance = await ProjectFactory.deploy();
+    projectsInstance = await ProjectFactory.deploy(skillWalletInstance.address);
     await projectsInstance.deployed();
-
-    // Create genesis community
-    // const community = await distributedTownInstance.createCommunity(
-    //   "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice",
-    //   0
-    // );
-
-    // const txReceipt = await community.wait();
-
-    // const communityCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'CommunityCreated');
-    // const communityAddress = communityCreatedEvent.args[0];
-
-    // communityInstance = await CommunityFactory.attach(communityAddress);
-    // console.log('community address');
-    // console.log(communityAddress);
-
   })
   describe("DistributedTown", function () {
 
