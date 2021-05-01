@@ -56,6 +56,7 @@ contract Projects is IERC721Metadata, ERC721 {
         _mint(creator, newProjectId);
         _setTokenURI(newProjectId, _props);
 
+        community.addProjectId(newProjectId);
         projectToTreasury[newProjectId] = address(new ProjectTreasury());
 
         communityToTokenId[_communityAddress].push(newProjectId);
@@ -64,8 +65,9 @@ contract Projects is IERC721Metadata, ERC721 {
         emit ProjectCreated(newProjectId, template, _communityAddress);
     }
 
-    function getProjectTreasuryAddress() public view returns(address) {
-        return address(projectTreasury);
+    // TODO: check if the community is calling this function
+    function getProjectTreasuryAddress(uint256 projectId) public view returns(address) {
+        return projectToTreasury[projectId];
     }
 
     function getCommunityProjects(address communityAddress) public view returns(uint256[] memory projectIds) {
