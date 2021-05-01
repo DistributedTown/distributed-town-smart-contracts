@@ -21,7 +21,7 @@ contract Community {
     uint256 public ownerId;
     uint16 public activeMembersCount;
     uint256 public scarcityScore;
-    mapping(uint256 => bool) public isMember;
+    mapping(address => bool) public isMember;
     uint256[] public skillWalletIds;
     uint256 public tokenId;
 
@@ -88,7 +88,7 @@ contract Community {
         ditoCredit.transfer(newMemberAddress, credits);
 
         skillWalletIds.push(tokenId);
-        isMember[tokenId] = true;
+        isMember[newMemberAddress] = true;
         activeMembersCount++;
 
         emit MemberAdded(newMemberAddress, tokenId, credits);
@@ -99,16 +99,17 @@ contract Community {
             activeMembersCount <= 24,
             "There are already 24 members, sorry!"
         );
-        require(!isMember[skillWalletTokenId], "You have already joined!");
-
         address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
+
+        require(!isMember[skillWalletAddress], "You have already joined!");
+
 
         // require(
         //     msg.sender == skillWalletAddress,
         //     "Only the skill wallet owner can call this function"
         // );
 
-        isMember[skillWalletTokenId] = true;
+        isMember[skillWalletAddress] = true;
         skillWalletIds[activeMembersCount] = skillWalletTokenId;
         skillWalletIds[1] = 123;
         activeMembersCount++;
@@ -142,5 +143,9 @@ contract Community {
         uint256 tokenId = distributedTown.communityAddressToTokenID(address(this));
         uint256 templateId = distributedTown.communityToTemplate(tokenId);
         return templateId;
+    }
+    
+    function getTreasuryBalance() public view returns (uint256) {
+        return ditoCredit.balanceOf(address(treasury));
     }
 }

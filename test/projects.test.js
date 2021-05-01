@@ -76,7 +76,7 @@ describe("Projects", function () {
         expect(uri).to.eq(metadataUrl);
       });
 
-      it.only("Should work when the user has an active skill wallet", async function () {
+      it("Should work when the user has an active skill wallet", async function () {
         const communities = await distributedTownInstance.getCommunities();
         const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
 
