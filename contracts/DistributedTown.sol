@@ -109,22 +109,6 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         
     }
 
-    function balanceOf(address _owner, uint256 _id)
-        public
-        view
-        override
-        returns (uint256)
-    {
-    }
-
-    function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {
-    }
-
     function setApprovalForAll(address _operator, bool _approved)
         public
         override
