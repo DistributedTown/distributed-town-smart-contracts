@@ -2,7 +2,7 @@
 const { ethers } = require("hardhat");
 
 const main = async () => {
-    const distributedTownAddress = "0x0A5513cDCc6135de45595B1956160a52c929b1a2";
+    const distributedTownAddress = "0x054e86098Ed6233b8e157d09670ec3A0938AedA0";
 
     const distributedTownFactory = await ethers.getContractFactory("DistributedTown");
     const distributedTownContract = await distributedTownFactory.attach(distributedTownAddress);

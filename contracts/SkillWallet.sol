@@ -45,12 +45,12 @@ contract SkillWallet is
     bytes32 private jobId;
     uint256 private fee;
 
-    constructor() public ERC721("SkillWallet", "SW") {
-        // // setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
-        // oracle = _oracle;
-        // jobId = _jobId;
-        // // TODO: change with the ext adapter parameters
-        // fee = 0.1 * 10**18; // 0.1 LINK
+    constructor(address _oracle, bytes32 _jobId) public ERC721("SkillWallet", "SW") {
+        setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
+        oracle = _oracle;
+        jobId = _jobId;
+        // TODO: change with the ext adapter parameters
+        fee = 0.1 * 10**18; // 0.1 LINK
     }
 
     function validate(

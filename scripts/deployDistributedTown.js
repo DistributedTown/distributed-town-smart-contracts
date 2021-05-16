@@ -6,13 +6,16 @@ const { deploy } = require("./utils")
 const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
-    const skillWalletAddress = "0x8ac6E742375a61C8F1cAa829E7d2B07aDD123C9C";
+    const skillWalletAddress = "0x42c2d3EBaAE166BA90D4baB27cD91621Ff77dAA5";
 
     console.log("\n\n 📡 Deploying...\n");
 
-    // const distributedTown = await deploy("DistributedTown", ['http://someurl.io', skillWalletAddress]);
-    // await distributedTown.deployed();
-    // await distributedTown.deployGenesisCommunities();
+    const distributedTown = await deploy("DistributedTown", ['http://someurl.io', skillWalletAddress]);
+    await distributedTown.deployed();
+    await distributedTown.deployGenesisCommunities();
+    
+    const coms = await distributedTown.getCommunities();
+    console.log(coms);
 
     console.log(
         " 💾  Artifacts (address, abi, and args) saved to: ",
