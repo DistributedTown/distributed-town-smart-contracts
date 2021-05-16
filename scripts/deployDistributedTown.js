@@ -1,16 +1,18 @@
 /* eslint no-use-before-define: "warn" */
 const chalk = require("chalk");
-const {  ethers } = require("hardhat");
+const { ethers } = require("hardhat");
 const { deploy } = require("./utils")
 
 const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
-    const skillWalletAddress = "0x002429B79191cfeB6f0ce16B682A823c3D5e9631";
+    const skillWalletAddress = "0x8ac6E742375a61C8F1cAa829E7d2B07aDD123C9C";
 
     console.log("\n\n 📡 Deploying...\n");
 
-    const distributedTown = await deploy("DistributedTown", ['http://someurl.io', skillWalletAddress]);
+    // const distributedTown = await deploy("DistributedTown", ['http://someurl.io', skillWalletAddress]);
+    // await distributedTown.deployed();
+    // await distributedTown.deployGenesisCommunities();
 
     console.log(
         " 💾  Artifacts (address, abi, and args) saved to: ",

@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.7.4;
+pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
@@ -17,7 +17,7 @@ contract Treasury is IERC721Receiver {
     address private communityAddress;
     uint256 private constant THREASHOLD = 3840 * 1e18;
 
-    constructor(address ditoCreditsAddress) {
+    constructor(address ditoCreditsAddress) public {
         ditoCredits = DITOCredit(ditoCreditsAddress);
         communityAddress = msg.sender;
     }
