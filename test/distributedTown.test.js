@@ -4,7 +4,7 @@ const { solidity } = require("ethereum-waffle");
 
 use(solidity);
 
-describe("DistributedTown", function () {
+describe.only("DistributedTown", function () {
 
   let skillWalletInstance;
   let provider;
@@ -19,10 +19,13 @@ describe("DistributedTown", function () {
 
     // Deploy instances
     const DistributedTownFactory = await ethers.getContractFactory("DistributedTown");
-    const ProjectFactory = await ethers.getContractFactory("Project");
+    const ProjectFactory = await ethers.getContractFactory("Projects");
     const SkillWalletFactory = await ethers.getContractFactory("SkillWallet");
     const CommunityFactory= await ethers.getContractFactory("Community");
-    skillWalletInstance = await SkillWalletFactory.deploy();
+    const oracle = '0xb5BA7f14Fe0205593255c77875348281b44DE7BF';
+    const jobId = ethers.utils.toUtf8Bytes('246a1e4d23694d858d7d5ed1088e2199')
+  
+    skillWalletInstance = await SkillWalletFactory.deploy(oracle, jobId);
     await skillWalletInstance.deployed();
 
     provider = skillWalletInstance.provider;
@@ -32,10 +35,18 @@ describe("DistributedTown", function () {
 
     distributedTownInstance = await DistributedTownFactory.deploy('http://someurl.co', skillWalletInstance.address);
     await distributedTownInstance.deployed();
-    await distributedTownInstance.deployGenesisCommunities();
+    await distributedTownInstance.deployGenesisCommunity(0);
+    await distributedTownInstance.deployGenesisCommunity(1);
+    await distributedTownInstance.deployGenesisCommunity(2);
 
-    projectsInstance = await ProjectFactory.deploy(skillWalletInstance.address);
-    await projectsInstance.deployed();
+    const coms = await distributedTownInstance.getCommunities();
+    console.log(coms);
+
+    const communityInstance = CommunityFactory.attach(coms[0]);
+    const a = await communityInstance.joinNewMember(accounts[2].address, 1, 1, 1, 1, 1, 1, '', 2006);
+    console.log(await a.wait());
+    // projectsInstance = await ProjectFactory.deploy(skillWalletInstance.address);
+    // await projectsInstance.deployed();
   })
   describe("DistributedTown", function () {
 

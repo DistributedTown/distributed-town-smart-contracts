@@ -29,7 +29,7 @@ contract Projects is IERC721Metadata, ERC721 {
     ISkillWallet skillWallet;
     
 
-    constructor(address _skillWalletAddress)
+    constructor(address _skillWalletAddress) public
         ERC721("DiToProject", 'DITOPRJ')
     {
         skillWallet = ISkillWallet(_skillWalletAddress);

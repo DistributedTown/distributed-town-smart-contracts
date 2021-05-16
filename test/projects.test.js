@@ -21,7 +21,7 @@ describe("Projects", function () {
 
     // Deploy instances
     const DistributedTownFactory = await ethers.getContractFactory("DistributedTown");
-    const ProjectFactory = await ethers.getContractFactory("Project");
+    const ProjectFactory = await ethers.getContractFactory("Projects");
     const SkillWalletFactory = await ethers.getContractFactory("SkillWallet");
     const CommunityFactory = await ethers.getContractFactory("Community");
 

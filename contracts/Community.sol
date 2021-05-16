@@ -2,7 +2,7 @@
 pragma solidity ^0.7.4;
 pragma experimental ABIEncoderV2;
 
-import "./CommonTypes.sol";
+import "./libs/CommonTypes.sol";
 import "./DITOCredit.sol";
 import "./ISkillWallet.sol";
 import "./Treasury.sol";
@@ -47,21 +47,19 @@ contract Community {
 
     // add JSON Schema base URL
     constructor(
-        string memory _url,
-        address _skillWalletAddress,
-        address _projectsAddress
-    ) {
+        string memory _url
+    ) public {
         metadataUri = _url;
 
-        skillWallet = ISkillWallet(_skillWalletAddress);
         ditoCredit = new DITOCredit();
         treasury = new Treasury(address(ditoCredit));
-        distributedTown = DistributedTown(address(msg.sender));
-        projects = Projects(_projectsAddress);
+        distributedTown = DistributedTown(msg.sender);
+        projects = Projects(distributedTown.projectsAddress());
+        skillWallet = ISkillWallet(distributedTown.skillWalletAddress());
 
         // TODO: default skills value
         // TODO: replace the community template uri with the treasury one
-        joinNewMember(address(treasury), 0, 0, 0, 0, 0, 0, _url, 2006 * 1e18);
+        // joinNewMember(address(treasury), 0, 0, 0, 0, 0, 0, _url, 2000 * 1e18);
     }
 
     // check if it's called only from deployer.
@@ -164,10 +162,11 @@ contract Community {
 
     // Called only by project (or create project from Community.sol (better))
     function addProjectId(uint256 projectId) public {
+        require(msg.sender == distributedTown.projectsAddress());
         projectIds.push(projectId);
     }
 
-    function getProjectTreasuryAddress(uint256 projectId) public view returns(address){
+    function getProjectTreasuryAddress(uint256 projectId) public view returns(address) {
         return projects.getProjectTreasuryAddress(projectId);
     }
 }
