@@ -16,6 +16,7 @@ describe("DistributedTown", function () {
     accounts = await ethers.getSigners();
     account0 = accounts[0];
     account1 = accounts[1];
+    
 
     // Deploy instances
     const DistributedTownFactory = await ethers.getContractFactory("DistributedTown");
