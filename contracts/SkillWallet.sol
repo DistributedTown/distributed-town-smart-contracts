@@ -1,11 +1,12 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.7.4;
+pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 import "./ISkillWallet.sol";
 import "./CommonTypes.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@chainlink/contracts/src/v0.6/ChainlinkClient.sol";
 
 /**
  * @title DistributedTown SkillWallet
@@ -13,7 +14,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @dev Implementation of the SkillWallet contract
  * @author DistributedTown
  */
-contract SkillWallet is ISkillWallet, IERC721Metadata, ERC721, Ownable {
+contract SkillWallet is
+    ISkillWallet,
+    IERC721Metadata,
+    ERC721,
+    Ownable,
+    ChainlinkClient
+{
     using Counters for Counters.Counter;
 
     // Mapping from token ID to active community that the SW is part of
@@ -31,9 +38,70 @@ contract SkillWallet is ISkillWallet, IERC721Metadata, ERC721, Ownable {
     // Mapping from token ID to activated status
     mapping(uint256 => bool) private _activatedSkillWallets;
 
-    Counters.Counter private _skillWalletCounter;
+    mapping(uint256 => string) public skillWalletToPubKey;
 
-    constructor() public ERC721("SkillWallet", "SW") {}
+    Counters.Counter private _skillWalletCounter;
+    address private oracle;
+    bytes32 private jobId;
+    uint256 private fee;
+
+    constructor(address _oracle, bytes32 _jobId) public ERC721("SkillWallet", "SW") {
+        setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
+        oracle = _oracle;
+        jobId = _jobId;
+        // TODO: change with the ext adapter parameters
+        fee = 0.1 * 10**18; // 0.1 LINK
+    }
+
+    function validate(
+        string calldata signature,
+        uint256 tokenId,
+        uint256 action
+    ) public {
+        require(
+            bytes(skillWalletToPubKey[tokenId]).length > 0,
+            "SkillWallet should be activated first!"
+        );
+        Chainlink.Request memory req =
+            buildChainlinkRequest(
+                jobId,
+                address(this),
+                this.validationCallback.selector
+            );
+        req.add("pubKey", skillWalletToPubKey[tokenId]);
+        req.add("signature", signature);
+        req.add(
+            "getNonceUrl",
+            string(
+                abi.encodePacked(
+                    "https://api.distributed.town/api/skillwallet/",
+                    tokenId.toString(),
+                    "/nonces?action=",
+                    action.toString()
+                )
+            )
+        );
+        req.add(
+            "delNonceUrl",
+            string(
+                abi.encodePacked(
+                    "https://api.distributed.town/api/skillwallet/",
+                    tokenId.toString(),
+                    "/nonces?action=",
+                    action.toString()
+                )
+            )
+        );
+        sendChainlinkRequestTo(oracle, req, fee);
+    }
+
+    function validationCallback(bytes32 _requestId, bool _isValid)
+        public
+    recordChainlinkFulfillment(_requestId)
+    {
+        if (_isValid) emit ValidationPassed(0, 0, 0);
+        else emit ValidationFailed(0, 0, 0);
+    }
 
     function create(
         address skillWalletOwner,
@@ -82,7 +150,7 @@ contract SkillWallet is ISkillWallet, IERC721Metadata, ERC721, Ownable {
         emit SkillSetUpdated(skillWalletId, newSkillSet);
     }
 
-    function activateSkillWallet(uint256 skillWalletId)
+    function activateSkillWallet(uint256 skillWalletId, string calldata pubKey)
         external
         override
         onlyOwner
@@ -99,7 +167,7 @@ contract SkillWallet is ISkillWallet, IERC721Metadata, ERC721, Ownable {
             _activatedSkillWallets[skillWalletId] == false,
             "SkillWallet: Skill wallet already activated"
         );
-
+        skillWalletToPubKey[skillWalletId] = pubKey;
         _activatedSkillWallets[skillWalletId] = true;
 
         emit SkillWalletActivated(skillWalletId);

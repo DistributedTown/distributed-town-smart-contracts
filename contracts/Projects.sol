@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: MIT
 
-pragma solidity ^0.7.4;
+pragma solidity ^0.6.10;
 
 pragma experimental ABIEncoderV2;
 
@@ -30,7 +30,7 @@ contract Projects is IERC721Metadata, ERC721 {
     
 
     constructor(address _skillWalletAddress)
-        ERC721("DiToProject", 'DITOPRJ')
+        public ERC721("DiToProject", 'DITOPRJ')
     {
         skillWallet = ISkillWallet(_skillWalletAddress);
     }

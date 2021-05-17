@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.7.4;
+pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -21,7 +21,7 @@ contract DITOCredit is ERC20, Ownable {
         _;
     }
 
-    constructor() ERC20("DiTo", "DITO") {
+    constructor() ERC20("DiTo", "DITO") public {
         whitelist[msg.sender] = true;
         _mint(msg.sender, 96000 * 1e18);
     }

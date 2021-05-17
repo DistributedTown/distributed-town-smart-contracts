@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.7.4;
+pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
 import "./CommonTypes.sol";
@@ -26,11 +26,9 @@ contract Community {
     uint256[] public skillWalletIds;
     uint256 public tokenId;
 
-    DITOCredit ditoCredit;
-    ISkillWallet skillWallet;
-    Treasury treasury;
     DistributedTown distributedTown;
-    Projects projects;
+    DITOCredit ditoCredit;
+    Treasury treasury;
     uint256[] projectIds;
 
     /**
@@ -47,17 +45,13 @@ contract Community {
 
     // add JSON Schema base URL
     constructor(
-        string memory _url,
-        address _skillWalletAddress,
-        address _projectsAddress
-    ) {
+        string memory _url
+    ) public {
         metadataUri = _url;
+        distributedTown = DistributedTown(msg.sender);
 
-        skillWallet = ISkillWallet(_skillWalletAddress);
         ditoCredit = new DITOCredit();
         treasury = new Treasury(address(ditoCredit));
-        distributedTown = DistributedTown(address(msg.sender));
-        projects = Projects(_projectsAddress);
 
         // TODO: default skills value
         // TODO: replace the community template uri with the treasury one
@@ -88,6 +82,7 @@ contract Community {
                 Types.Skill(displayStringId3, level3)
             );
 
+        ISkillWallet skillWallet = ISkillWallet(distributedTown.skillWalletAddress());
         skillWallet.create(newMemberAddress, skillSet, uri);
         uint256 tokenId = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
 
@@ -107,6 +102,8 @@ contract Community {
             activeMembersCount <= 24,
             "There are already 24 members, sorry!"
         );
+
+        ISkillWallet skillWallet = ISkillWallet(distributedTown.skillWalletAddress());
         address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
 
         require(!isMember[skillWalletAddress], "You have already joined!");
@@ -168,6 +165,7 @@ contract Community {
     }
 
     function getProjectTreasuryAddress(uint256 projectId) public view returns(address){
+        Projects projects = Projects(distributedTown.projectsAddress());
         return projects.getProjectTreasuryAddress(projectId);
     }
 }
