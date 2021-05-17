@@ -6,13 +6,15 @@ const { deploy } = require("./utils")
 const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
-    const skillWalletAddress = "0x42c2d3EBaAE166BA90D4baB27cD91621Ff77dAA5";
+    const skillWalletAddress = "0xabD7A12E094D7b1A545F3757B7fb06834297d2e3";
 
     console.log("\n\n 📡 Deploying...\n");
 
     const distributedTown = await deploy("DistributedTown", ['http://someurl.io', skillWalletAddress]);
     await distributedTown.deployed();
-    await distributedTown.deployGenesisCommunities();
+    await distributedTown.deployGenesisCommunities(0);
+    await distributedTown.deployGenesisCommunities(1);
+    await distributedTown.deployGenesisCommunities(2);
     
     const coms = await distributedTown.getCommunities();
     console.log(coms);
