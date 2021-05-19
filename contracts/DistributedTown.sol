@@ -8,10 +8,12 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155MetadataURI.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./Community.sol";
 import "./ISkillWallet.sol";
 import "./Projects.sol";
+import "./CommonTypes.sol";
 
 /**
  * @title DistributedTown Community
@@ -20,7 +22,7 @@ import "./Projects.sol";
  * @author DistributedTown
  */
 
-contract DistributedTown is ERC1155, ERC1155Holder {
+contract DistributedTown is ERC1155, ERC1155Holder, Ownable {
     event CommunityCreated(
         address communityContract,
         uint256 communityId,
@@ -29,7 +31,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
     );
     using Counters for Counters.Counter;
 
-    Counters.Counter private communityTokenIds; 
+    Counters.Counter private communityTokenIds;
 
     mapping(address => uint256) public communityAddressToTokenID;
     mapping(uint256 => uint256) public communityToTemplate;
@@ -40,9 +42,13 @@ contract DistributedTown is ERC1155, ERC1155Holder {
     ISkillWallet skillWallet;
     Projects projects;
     bool genesisCommunitiesCreated;
+    address partnersAgreementContract;
 
     // TODO Add JSON Schema base URL
-    constructor(string memory _url, address _skillWalletAddress) public ERC1155(_url) {
+    constructor(string memory _url, address _skillWalletAddress)
+        public
+        ERC1155(_url)
+    {
         // initialize pos values of the 3 templates;
         skillWalletAddress = _skillWalletAddress;
         skillWallet = ISkillWallet(_skillWalletAddress);
@@ -51,17 +57,64 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         projectsAddress = address(projects);
     }
 
-    function createCommunity(string calldata communityMetadata, uint256 template)
+    function setPartnersAgreementAddress(address _partnersAgreementContract)
         public
+        onlyOwner
     {
+        partnersAgreementContract = _partnersAgreementContract;
+    }
 
+    function createPartnersCommunity(
+        string calldata communityMetadata,
+        address owner,
+        string memory tokenName,
+        string memory tokenSymbol
+    ) public {
+        require(
+            partnersAgreementContract != address(0),
+            "Partners agreement contract not set!"
+        );
+        bool isRegistered = skillWallet.isSkillWalletRegistered(owner);
+        require(
+            isRegistered,
+            "Only a registered skill wallet can create a community."
+        );
+
+        uint256 skillWalletId = skillWallet.getSkillWalletIdByOwner(owner);
+
+        _mint(address(this), Types.Template.Other, 1, "");
+
+        communityTokenIds.increment();
+        uint256 newItemId = communityTokenIds.current();
+
+        // check if skill wallet is active
+        // TODO: add skill wallet address
+        Community community =
+            new Community(communityMetadata, tokenName, tokenSymbol);
+        communityAddressToTokenID[address(community)] = newItemId;
+        communityToTemplate[newItemId] = 3;
+        communities.push(address(community));
+
+        //TODO: add the creator as a community member
+        emit CommunityCreated(address(community), newItemId, 3, owner);
+    }
+
+    function createCommunity(
+        string calldata communityMetadata,
+        uint256 template
+    ) public {
         bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
-        require(isRegistered, 'Only a registered skill wallet can create a community.');
+        require(
+            isRegistered,
+            "Only a registered skill wallet can create a community."
+        );
 
         uint256 skillWalletId = skillWallet.getSkillWalletIdByOwner(msg.sender);
         bool isActive = skillWallet.isSkillWalletActivated(skillWalletId);
-        require(isActive, 'Only an active skill wallet can create a community.');
-
+        require(
+            isActive,
+            "Only an active skill wallet can create a community."
+        );
         // TODO: add check for validated skills;
         _mint(address(this), template, 1, "");
 
@@ -70,7 +123,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
 
         // check if skill wallet is active
         // TODO: add skill wallet address
-        Community community = new Community(communityMetadata);
+        Community community = new Community(communityMetadata, "DiTo", "DITO");
         communityAddressToTokenID[address(community)] = newItemId;
         communityToTemplate[newItemId] = template;
         communities.push(address(community));
@@ -84,13 +137,9 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         );
     }
 
-    function transferToMember(address _to, uint256 _value) public {
-        
-    }
+    function transferToMember(address _to, uint256 _value) public {}
 
-    function transferToCommunity(address _from, uint256 _value) public {
-        
-    }
+    function transferToCommunity(address _from, uint256 _value) public {}
 
     function safeTransferFrom(
         address _from,
@@ -98,9 +147,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         uint256 _id,
         uint256 _value,
         bytes calldata _data
-    ) public override {
-        
-    }
+    ) public override {}
 
     function safeBatchTransferFrom(
         address _from,
@@ -108,50 +155,44 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         uint256[] calldata _ids,
         uint256[] calldata _values,
         bytes calldata _data
-    ) public override {
-        
-    }
+    ) public override {}
 
     function balanceOf(address _owner, uint256 _id)
         public
         view
         override
         returns (uint256)
-    {
-    }
+    {}
 
     function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids)
         public
         view
         override
         returns (uint256[] memory)
-    {
-    }
+    {}
 
     function setApprovalForAll(address _operator, bool _approved)
         public
         override
-    {
-        
-    }
+    {}
 
     function isApprovedForAll(address _owner, address _operator)
         public
         view
         override
         returns (bool)
-    {
-        
-    }
+    {}
 
-    function getCommunities() public view returns(address[] memory) {
+    function getCommunities() public view returns (address[] memory) {
         return communities;
     }
 
     function deployGenesisCommunities() public {
-
-        require(!genesisCommunitiesCreated, 'Genesis communities can be created only once');
-         string[3] memory metadata =
+        require(
+            !genesisCommunitiesCreated,
+            "Genesis communities can be created only once"
+        );
+        string[3] memory metadata =
             [
                 "https://hub.textile.io/ipfs/bafkreick7p4yms7cmwnmfizmcl5e6cdpij4jsl2pkhk5cejn744uwnziny",
                 "https://hub.textile.io/ipfs/bafkreid7jtzhuedeggn5welup7iyxchpqodbyam3yfnt4ey4xwnusr3vbe",
@@ -162,25 +203,24 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         communityTokenIds.increment();
         uint256 newItemId = communityTokenIds.current();
         _mint(address(this), 0, 1, "");
-        Community openSourceCommunity = new Community(metadata[0]);
+        Community openSourceCommunity =
+            new Community(metadata[0], "DiTo", "DITO");
         communityAddressToTokenID[address(openSourceCommunity)] = newItemId;
         communityToTemplate[newItemId] = 0;
         communities.push(address(openSourceCommunity));
 
-
         communityTokenIds.increment();
         newItemId = communityTokenIds.current();
         _mint(address(this), 1, 1, "");
-        Community artCommunity = new Community(metadata[1]);
+        Community artCommunity = new Community(metadata[1], "DiTo", "DITO");
         communityAddressToTokenID[address(artCommunity)] = newItemId;
         communityToTemplate[newItemId] = 1;
         communities.push(address(artCommunity));
 
-
         communityTokenIds.increment();
         newItemId = communityTokenIds.current();
         _mint(address(this), 2, 1, "");
-        Community localCommunity = new Community(metadata[2]);
+        Community localCommunity = new Community(metadata[2], "DiTo", "DITO");
         communityAddressToTokenID[address(localCommunity)] = newItemId;
         communityToTemplate[newItemId] = 2;
         communities.push(address(localCommunity));

@@ -45,12 +45,14 @@ contract Community {
 
     // add JSON Schema base URL
     constructor(
-        string memory _url
+        string memory _url,
+        string memory tokenName,
+        string memory tokenSymbol
     ) public {
         metadataUri = _url;
         distributedTown = DistributedTown(msg.sender);
 
-        ditoCredit = new DITOCredit();
+        ditoCredit = new DITOCredit(tokenName, tokenSymbol);
         treasury = new Treasury(address(ditoCredit));
 
         // TODO: default skills value

@@ -21,7 +21,7 @@ contract DITOCredit is ERC20, Ownable {
         _;
     }
 
-    constructor() ERC20("DiTo", "DITO") public {
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) public {
         whitelist[msg.sender] = true;
         _mint(msg.sender, 96000 * 1e18);
     }
