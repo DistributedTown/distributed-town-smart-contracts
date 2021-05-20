@@ -6,7 +6,7 @@ const { deploy } = require("./utils")
 const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
-    const skillWalletAddress = "0x42c2d3EBaAE166BA90D4baB27cD91621Ff77dAA5";
+    const skillWalletAddress = "0xFB3F02c6CA4dFef1b6B5Ef74591ac47a7B5C85d3";
 
     console.log("\n\n 📡 Deploying...\n");
 

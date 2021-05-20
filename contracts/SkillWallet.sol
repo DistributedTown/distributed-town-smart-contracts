@@ -49,7 +49,6 @@ contract SkillWallet is
         setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
         oracle = _oracle;
         jobId = _jobId;
-        // TODO: change with the ext adapter parameters
         fee = 0.1 * 10**18; // 0.1 LINK
     }
 
@@ -62,6 +61,7 @@ contract SkillWallet is
             bytes(skillWalletToPubKey[tokenId]).length > 0,
             "SkillWallet should be activated first!"
         );
+
         Chainlink.Request memory req =
             buildChainlinkRequest(
                 jobId,
