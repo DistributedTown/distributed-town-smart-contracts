@@ -41,7 +41,6 @@ contract DistributedTown is ERC1155, ERC1155Holder, Ownable {
     address public skillWalletAddress;
     ISkillWallet skillWallet;
     Projects projects;
-    bool genesisCommunitiesCreated;
     address partnersAgreementContract;
 
     // TODO Add JSON Schema base URL
@@ -52,7 +51,6 @@ contract DistributedTown is ERC1155, ERC1155Holder, Ownable {
         // initialize pos values of the 3 templates;
         skillWalletAddress = _skillWalletAddress;
         skillWallet = ISkillWallet(_skillWalletAddress);
-        genesisCommunitiesCreated = false;
         projects = new Projects(_skillWalletAddress);
         projectsAddress = address(projects);
     }
@@ -187,50 +185,26 @@ contract DistributedTown is ERC1155, ERC1155Holder, Ownable {
         return communities;
     }
 
-    function deployGenesisCommunities() public {
+    function deployGenesisCommunities(uint256 template) public {
         require(
-            !genesisCommunitiesCreated,
-            "Genesis communities can be created only once"
+            communityTokenIds.current() < 3,
+            "Only 3 genesis communities can be created!"
         );
+        require(template >= 0 && template <= 2, 'The genesis communities template must be one of the default ones.');
         string[3] memory metadata =
             [
                 "https://hub.textile.io/ipfs/bafkreick7p4yms7cmwnmfizmcl5e6cdpij4jsl2pkhk5cejn744uwnziny",
                 "https://hub.textile.io/ipfs/bafkreid7jtzhuedeggn5welup7iyxchpqodbyam3yfnt4ey4xwnusr3vbe",
                 "https://hub.textile.io/ipfs/bafkreibglk3i7c24b2zprsd3jlkzfhxti6rubv3tkif6hu36lz42uwrfki"
             ];
-        // check if skill wallet is active
-        // TODO: add skill wallet address
-        communityTokenIds.increment();
         uint256 newItemId = communityTokenIds.current();
-        _mint(address(this), 0, 1, "");
-        Community openSourceCommunity =
-            new Community(metadata[0], "DiTo", "DITO");
-        communityAddressToTokenID[address(openSourceCommunity)] = newItemId;
+        _mint(address(this), template, 1, "");
+        Community community = new Community(metadata[template]);
+        communityAddressToTokenID[address(community)] = newItemId;
         communityToTemplate[newItemId] = 0;
-        communities.push(address(openSourceCommunity));
-
+        communities.push(address(community));
         communityTokenIds.increment();
-        newItemId = communityTokenIds.current();
-        _mint(address(this), 1, 1, "");
-        Community artCommunity = new Community(metadata[1], "DiTo", "DITO");
-        communityAddressToTokenID[address(artCommunity)] = newItemId;
-        communityToTemplate[newItemId] = 1;
-        communities.push(address(artCommunity));
 
-        communityTokenIds.increment();
-        newItemId = communityTokenIds.current();
-        _mint(address(this), 2, 1, "");
-        Community localCommunity = new Community(metadata[2], "DiTo", "DITO");
-        communityAddressToTokenID[address(localCommunity)] = newItemId;
-        communityToTemplate[newItemId] = 2;
-        communities.push(address(localCommunity));
-
-        genesisCommunitiesCreated = true;
-        emit CommunityCreated(
-            address(localCommunity),
-            newItemId,
-            2,
-            msg.sender
-        );
+        emit CommunityCreated(address(community), newItemId, 2, msg.sender);
     }
 }

@@ -54,15 +54,11 @@ contract Community {
 
         ditoCredit = new DITOCredit(tokenName, tokenSymbol);
         treasury = new Treasury(address(ditoCredit));
-
-        // TODO: default skills value
-        // TODO: replace the community template uri with the treasury one
-        joinNewMember(address(treasury), 0, 0, 0, 0, 0, 0, _url, 2006 * 1e18);
+        joinNewMember(0, 0, 0, 0, 0, 0, _url, 2006 * 1e18);
     }
 
     // check if it's called only from deployer.
     function joinNewMember(
-        address newMemberAddress,
         uint64 displayStringId1,
         uint8 level1,
         uint64 displayStringId2,
@@ -77,6 +73,12 @@ contract Community {
             "There are already 24 members, sorry!"
         );
 
+        // the DiTo contract can only join the treasury as a member of the community
+        address newMemberAddress =
+            msg.sender == address(distributedTown)
+                ? address(treasury)
+                : msg.sender;
+
         Types.SkillSet memory skillSet =
             Types.SkillSet(
                 Types.Skill(displayStringId1, level1),
@@ -84,7 +86,8 @@ contract Community {
                 Types.Skill(displayStringId3, level3)
             );
 
-        ISkillWallet skillWallet = ISkillWallet(distributedTown.skillWalletAddress());
+        ISkillWallet skillWallet =
+            ISkillWallet(distributedTown.skillWalletAddress());
         skillWallet.create(newMemberAddress, skillSet, uri);
         uint256 tokenId = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
 
@@ -105,7 +108,8 @@ contract Community {
             "There are already 24 members, sorry!"
         );
 
-        ISkillWallet skillWallet = ISkillWallet(distributedTown.skillWalletAddress());
+        ISkillWallet skillWallet =
+            ISkillWallet(distributedTown.skillWalletAddress());
         address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
 
         require(!isMember[skillWalletAddress], "You have already joined!");
@@ -166,7 +170,11 @@ contract Community {
         projectIds.push(projectId);
     }
 
-    function getProjectTreasuryAddress(uint256 projectId) public view returns(address){
+    function getProjectTreasuryAddress(uint256 projectId)
+        public
+        view
+        returns (address)
+    {
         Projects projects = Projects(distributedTown.projectsAddress());
         return projects.getProjectTreasuryAddress(projectId);
     }
