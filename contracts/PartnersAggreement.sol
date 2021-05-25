@@ -16,45 +16,53 @@ contract PartnersAggreement {
     DistributedTown distributedTown;
     ISkillWallet skillWallet;
 
-    mapping(uint256 => address) partnersContracts;
-    mapping(uint256 => bool) isPartnersAgreement;
+    mapping(address => address) partnersContracts;
+    mapping(address => bool) isPartnersAgreement;
 
     event PartnersAggreementCreated(
-        uint256 communityId,
+        address communityAddress,
         uint256 skillWalletId
     );
 
     // add JSON Schema base URL
-    constructor(address _distributedTownAddress) public {
+    constructor(address _distributedTownAddress, address _skillWalletAddress)
+        public
+    {
         distributedTown = DistributedTown(_distributedTownAddress);
-        skillWallet = ISkillWallet(DistributedTown.skillWalletAddress());
+        skillWallet = ISkillWallet(_skillWalletAddress);
     }
 
     // roles are in the uri of the community
     // partnersContracts ownership should be checked before calling the function
     function create(
         string memory swUri,
-        string memory displayString,
-        string memory level,
         string memory uri,
         address partnersContract,
-        string memory tokenName, 
-        string memory tokenSymbol
+        string memory tokenName,
+        string memory tokenSymbol,
+        uint64 skillId
     ) public {
         Types.SkillSet memory skillSet =
             Types.SkillSet(
-                Types.Skill(displayString, level)
+                Types.Skill(skillId, 10),
+                Types.Skill(0, 0),
+                Types.Skill(0, 0)
             );
 
         skillWallet.create(msg.sender, skillSet, swUri);
-        distributedTown.createPartnersCommunity(uri, msg.sender, tokenName, tokenSymbol);
+        distributedTown.createPartnersCommunity(
+            uri,
+            msg.sender,
+            tokenName,
+            tokenSymbol
+        );
 
         uint256 skillWalletId = skillWallet.getSkillWalletIdByOwner(msg.sender);
-        uint256 communityId = skillWallet.getActiveCommunity(skillWalletId);
+        address community = skillWallet.getActiveCommunity(skillWalletId);
 
-        isPartnersAgreement[communityId] = true;
-        partnersContracts[communityId] = partnersContract;
+        isPartnersAgreement[community] = true;
+        partnersContracts[community] = partnersContract;
 
-        emit PartnersAggreementCreated(communityId, skillWalletId);
+        emit PartnersAggreementCreated(community, skillWalletId);
     }
 }

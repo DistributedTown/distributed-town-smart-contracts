@@ -4,9 +4,11 @@ const { solidity } = require("ethereum-waffle");
 
 use(solidity);
 
-describe("Community", function () {
+describe.only("PartnersAgreemeent", function () {
 
   let skillWalletInstance;
+  let distributedTownInstance;
+  let partnersAgreementInstance;
   let communityInstance;
   let provider;
   let accounts;
@@ -20,16 +22,14 @@ describe("Community", function () {
 
     // Deploy instances
     const DistributedTownFactory = await ethers.getContractFactory("DistributedTown");
-    const ProjectFactory = await ethers.getContractFactory("Projects");
     const SkillWalletFactory = await ethers.getContractFactory("SkillWallet");
     const CommunityFactory = await ethers.getContractFactory("Community");
-
 
     const oracle = '0xb5BA7f14Fe0205593255c77875348281b44DE7BF';
     const jobId = ethers.utils.toUtf8Bytes('55d24f869f804405a4bfaff02fd52e5f')
 
-
-    skillWalletInstance = await SkillWalletFactory.deploy(oracle, jobId);    await skillWalletInstance.deployed();
+    skillWalletInstance = await SkillWalletFactory.deploy(oracle, jobId);   
+    await skillWalletInstance.deployed();
 
     provider = skillWalletInstance.provider;
 
@@ -44,20 +44,28 @@ describe("Community", function () {
 
     const communityAddresses = await distributedTownInstance.getCommunities();
     communityInstance = await CommunityFactory.attach(communityAddresses[0]);
-
-    projectsInstance = await ProjectFactory.deploy(skillWalletInstance.address);
-    await projectsInstance.deployed();
   });
-  describe("joinNewMember()", function () {
-    it("Should be able to add the new member to the community", async function () {
+
+
+  describe("create()", function () {
+    it("Should be able to create a partners agreement", async function () {
       const [owner] = await ethers.getSigners();
       const userAddress = owner.address;
       let credits = ethers.utils.parseEther("2006");
-      const a = await communityInstance.joinNewMember(1, 1, 2, 2, 3, 3, 'http://someuri.co', credits);
+      const a = await partnersAgreementInstance.create(
+          'http://swUri.id', 
+          'http://comUri.id',
+          '0x1aE7CeDf6b3468F30be1d2fa0437F7227a809DCA',
+          'TestToken',
+          'TST',
+          1
+      );
       const txReceipt = await a.wait();
 
-      const memberAddedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MemberAdded');
-      const tokenId = memberAddedEvent.args[1];
+      const partnersAgrCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'PartnersAggreementCreated');
+      const comAddr = partnersAgrCreatedEvent.args[0];
+      const swId = partnersAgrCreatedEvent.args[1];
+
       const membersCount = await communityInstance.activeMembersCount()
       const isMember = await communityInstance.isMember(userAddress)
       const skillWalletIds = await communityInstance.getMembers();

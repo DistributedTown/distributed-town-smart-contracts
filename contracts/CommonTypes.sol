@@ -8,7 +8,7 @@ library Types {
         Skill skill3;
     }
     struct Skill {
-        uint64 displayStringId;
+        uint64 skillId;
         uint8 level;
     }
     enum Template {
@@ -16,10 +16,5 @@ library Types {
         Art, 
         Local,
         Other
-    }
-
-    struct LatestSkills {
-        uint8 posValue;
-        uint256 categoryID;
     }
 }

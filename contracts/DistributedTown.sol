@@ -80,19 +80,18 @@ contract DistributedTown is ERC1155, ERC1155Holder, Ownable {
 
         uint256 skillWalletId = skillWallet.getSkillWalletIdByOwner(owner);
 
-        _mint(address(this), Types.Template.Other, 1, "");
+        _mint(address(this), 3, 1, "");
 
         communityTokenIds.increment();
         uint256 newItemId = communityTokenIds.current();
 
-        // check if skill wallet is active
-        // TODO: add skill wallet address
         Community community =
             new Community(communityMetadata, tokenName, tokenSymbol);
         communityAddressToTokenID[address(community)] = newItemId;
         communityToTemplate[newItemId] = 3;
         communities.push(address(community));
 
+        // community.join(skillWalletId, 2000 * 1e18);
         //TODO: add the creator as a community member
         emit CommunityCreated(address(community), newItemId, 3, owner);
     }
@@ -126,7 +125,9 @@ contract DistributedTown is ERC1155, ERC1155Holder, Ownable {
         communityToTemplate[newItemId] = template;
         communities.push(address(community));
 
-        //TODO: add the creator as a community member
+        // TODO: add the creator as a community member
+        // calculate credits;
+        community.join(skillWalletId, 2000 * 1e18);
         emit CommunityCreated(
             address(community),
             newItemId,
@@ -190,7 +191,10 @@ contract DistributedTown is ERC1155, ERC1155Holder, Ownable {
             communityTokenIds.current() < 3,
             "Only 3 genesis communities can be created!"
         );
-        require(template >= 0 && template <= 2, 'The genesis communities template must be one of the default ones.');
+        require(
+            template >= 0 && template <= 2,
+            "The genesis communities template must be one of the default ones."
+        );
         string[3] memory metadata =
             [
                 "https://hub.textile.io/ipfs/bafkreick7p4yms7cmwnmfizmcl5e6cdpij4jsl2pkhk5cejn744uwnziny",
@@ -199,7 +203,12 @@ contract DistributedTown is ERC1155, ERC1155Holder, Ownable {
             ];
         uint256 newItemId = communityTokenIds.current();
         _mint(address(this), template, 1, "");
-        Community community = new Community(metadata[template]);
+        Community community =
+            new Community(
+                metadata[template],
+                "DiTo",
+                "DITO"
+            );
         communityAddressToTokenID[address(community)] = newItemId;
         communityToTemplate[newItemId] = 0;
         communities.push(address(community));

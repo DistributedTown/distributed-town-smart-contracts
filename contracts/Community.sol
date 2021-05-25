@@ -19,12 +19,10 @@ import "./Projects.sol";
 contract Community {
     string public metadataUri;
 
-    uint256 public ownerId;
     uint16 public activeMembersCount;
     uint256 public scarcityScore;
     mapping(address => bool) public isMember;
     uint256[] public skillWalletIds;
-    uint256 public tokenId;
 
     DistributedTown distributedTown;
     DITOCredit ditoCredit;
@@ -34,6 +32,7 @@ contract Community {
     /**
      * @dev emitted when a member is added
      * @param _member the user which just joined the community
+     * @param _skillWalletTokenId the user skill wallet ID which just joined the community
      * @param _transferredTokens the amount of transferred dito tokens on join
      **/
     event MemberAdded(
@@ -46,24 +45,24 @@ contract Community {
     // add JSON Schema base URL
     constructor(
         string memory _url,
-        string memory tokenName,
-        string memory tokenSymbol
+        string memory _tokenName,
+        string memory _tokenSymbol
     ) public {
         metadataUri = _url;
         distributedTown = DistributedTown(msg.sender);
 
-        ditoCredit = new DITOCredit(tokenName, tokenSymbol);
+        ditoCredit = new DITOCredit(_tokenName, _tokenSymbol);
         treasury = new Treasury(address(ditoCredit));
-        joinNewMember(0, 0, 0, 0, 0, 0, _url, 2006 * 1e18);
+        joinNewMember(0, 0, 0, 0, 0, 0, _url, 2000 * 1e18);
     }
 
     // check if it's called only from deployer.
     function joinNewMember(
-        uint64 displayStringId1,
+        uint64 skillId1,
         uint8 level1,
-        uint64 displayStringId2,
+        uint64 skillId2,
         uint8 level2,
-        uint64 displayStringId3,
+        uint64 skillId3,
         uint8 level3,
         string memory uri,
         uint256 credits
@@ -81,9 +80,9 @@ contract Community {
 
         Types.SkillSet memory skillSet =
             Types.SkillSet(
-                Types.Skill(displayStringId1, level1),
-                Types.Skill(displayStringId2, level2),
-                Types.Skill(displayStringId3, level3)
+                Types.Skill(skillId1, level1),
+                Types.Skill(skillId2, level2),
+                Types.Skill(skillId3, level3)
             );
 
         ISkillWallet skillWallet =
@@ -121,7 +120,6 @@ contract Community {
 
         isMember[skillWalletAddress] = true;
         skillWalletIds[activeMembersCount] = skillWalletTokenId;
-        skillWalletIds[1] = 123;
         activeMembersCount++;
 
         ditoCredit.addToWhitelist(skillWalletAddress);
