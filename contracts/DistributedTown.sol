@@ -2,12 +2,8 @@
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155MetadataURI.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "./Community.sol";
 import "./ISkillWallet.sol";
@@ -59,14 +55,14 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
         require(
             isRegistered,
-            "Only a registered skill wallet can create a community."
+            "SW not registered."
         );
 
         uint256 skillWalletId = skillWallet.getSkillWalletIdByOwner(msg.sender);
         bool isActive = skillWallet.isSkillWalletActivated(skillWalletId);
         require(
             isActive,
-            "Only an active skill wallet can create a community."
+            "SW not active."
         );
 
         // TODO: add check for validated skills;
@@ -90,52 +86,6 @@ contract DistributedTown is ERC1155, ERC1155Holder {
             msg.sender
         );
     }
-
-    function transferToMember(address _to, uint256 _value) public {}
-
-    function transferToCommunity(address _from, uint256 _value) public {}
-
-    function safeTransferFrom(
-        address _from,
-        address _to,
-        uint256 _id,
-        uint256 _value,
-        bytes calldata _data
-    ) public override {}
-
-    function safeBatchTransferFrom(
-        address _from,
-        address _to,
-        uint256[] calldata _ids,
-        uint256[] calldata _values,
-        bytes calldata _data
-    ) public override {}
-
-    function balanceOf(address _owner, uint256 _id)
-        public
-        view
-        override
-        returns (uint256)
-    {}
-
-    function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {}
-
-    function setApprovalForAll(address _operator, bool _approved)
-        public
-        override
-    {}
-
-    function isApprovedForAll(address _owner, address _operator)
-        public
-        view
-        override
-        returns (bool)
-    {}
 
     function getCommunities() public view returns (address[] memory) {
         return communities;
