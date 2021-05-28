@@ -1,121 +1,153 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.10;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./GigStatuses.sol";
+import "./Community.sol";
 
-// TODO: figure out rates.
-// TODO: transfer tokens.
-// TODO: 1 gigs instance per community
-contract Gigs {
+contract Gigs is IERC721Metadata, ERC721 {
     using Counters for Counters.Counter;
 
     event GigCreated(address _creator, uint256 _gigId);
-    event GigCompleted(address _creator, address _gigCompleter, uint256 _gigId);
-    event GigTaken(address _creator, address _taker, uint256 _gigTaker);
-    event GigSubmitted(address _creator, address _gigSubmitter, uint256 _gigId);
-    event GigValidated(uint256 _gigId, address _creator, string _gigHash);
-    enum GigStatus {Open, Taken, Submitted, Completed}
+    event GigCompleted(uint256 _gigId);
+    event GigTaken(uint256 _gigId);
+    event GigSubmitted(uint256 _gigId);
+    event GigValidated(
+        uint256 _gigId,
+        bool transferedCredits,
+        uint256 creditsTransfered
+    );
 
     Counters.Counter gigId;
 
     struct Gig {
-        address owner;
+        address creator;
         address taker;
-        string gigHash;
         uint256 ditoCredits;
-        GigStatus status;
-        uint16 rate;
+        GigStatuses.GigStatus status;
     }
 
     mapping(uint256 => Gig) public gigs;
-    mapping(address => uint256[]) ownersToGigs;
-    mapping(address => uint256[]) completedGigs;
-    mapping(uint256 => bool) isValidated;
+    mapping(uint256 => bool) public isValidated;
+    Community community;
+
+    constructor()
+        public ERC721("Gigs", "GIG")
+    {
+        community = Community(msg.sender);
+    }
 
 
-    function createGig(uint256 ditoCredits) public {
+    // in the metadata uri - skills, title, description
+    function createGig(
+        address creator,
+        uint256 _ditoCredits,
+        string memory _metadataUrl
+    ) public {
+        // TODO: verify identity chainlink!
+        require(
+            community.isMember(creator),
+            "The creator of the gig should be a member of the community."
+        );
+        // TODO: Calculate credits with chainlink
+        require(
+            _ditoCredits >= 6 && _ditoCredits <= 720,
+            "Invalid credits amount."
+        );
+
         uint256 newGigId = gigId.current();
-        gigs[gigId.current()] = Gig(
-            msg.sender,
+
+        _mint(creator, newGigId);
+        _setTokenURI(newGigId, _metadataUrl);
+        gigs[newGigId] = Gig(
+            creator,
             address(0),
-            "",
-            ditoCredits,
-            GigStatus.Open,
-            0
+            _ditoCredits,
+            GigStatuses.GigStatus.Open
         );
 
-        ownersToGigs[msg.sender].push(
-            newGigId
-        );
         isValidated[newGigId] = false;
         gigId.increment();
 
-        emit GigCreated(msg.sender, newGigId);
+        emit GigCreated(creator, newGigId);
     }
 
-    function takeGig(uint256 _gigId) public {
+    function takeGig(uint256 _gigId, address taker) public {
         require(
-            gigs[_gigId].status == GigStatus.Open,
-            "This gig is not open for being taken."
+            ownerOf(_gigId) != taker,
+            "The creator can't take the gig"
         );
-        require(isValidated[_gigId], "Gig creation not yet validated.");
-
-        gigs[_gigId].taker = msg.sender;
-        gigs[_gigId].status = GigStatus.Taken;
-
-        isValidated[_gigId] = false;
-
-        emit GigTaken(gigs[_gigId].owner, msg.sender, _gigId);
-    }
-
-    function submitGig(uint256 _gigId) public {
         require(
-            gigs[_gigId].status == GigStatus.Taken,
-            "This gig is not yet taken."
+            community.isMember(taker),
+            "The taker should be a community member."
         );
-        require(isValidated[_gigId], "Gig taken not yet validated.");
 
-        gigs[_gigId].status = GigStatus.Submitted;
+        _changeStatus(_gigId, GigStatuses.GigStatus.Taken);
 
-        isValidated[_gigId] = false;
+        gigs[_gigId].taker = taker;
 
-        emit GigSubmitted(gigs[_gigId].owner, msg.sender, _gigId);
+        emit GigTaken(_gigId);
     }
 
-    function completeGig(uint256 _gigId, uint16 rate) public {
+    function submitGig(uint256 _gigId, address submitter) public {
         require(
-            gigs[_gigId].status == GigStatus.Submitted,
-            "This gig is not yet submitted."
-        );
-        require(isValidated[_gigId], "Gig submission not yet validated.");
-
-        gigs[_gigId].status = GigStatus.Completed;
-        gigs[_gigId].rate = rate;
-
-        completedGigs[msg.sender].push(
-            _gigId
+            gigs[_gigId].taker == submitter,
+            "Only the taker can submit the gig!"
         );
 
-        isValidated[_gigId] = false;
+        _changeStatus(_gigId, GigStatuses.GigStatus.Submitted);
 
-        emit GigCompleted(gigs[_gigId].owner, msg.sender, _gigId);
+        emit GigSubmitted(_gigId);
     }
 
-    function validate(uint256 _gigId, string calldata _gigHash)
-        public
-    {
+    function completeGig(uint256 _gigId, address completor) public {
+        require(
+            gigs[_gigId].creator == completor,
+            "Can be completed only by the creator."
+        );
+
+        _changeStatus(_gigId, GigStatuses.GigStatus.Completed);
+
+        emit GigCompleted(_gigId);
+    }
+
+    function validate(uint256 _gigId) public {
         // Chainlink validate hash
         isValidated[_gigId] = true;
-        gigs[_gigId].gigHash = _gigHash;
+        Gig memory gig = gigs[_gigId];
 
-        emit GigValidated(_gigId, gigs[_gigId].owner, _gigHash);
+        if (gig.status == GigStatuses.GigStatus.Completed) {
+            // how to transfer when the msg.sender isn't the user?
+            // approved?
+            // community.transfer(Gig.ditoCredits);
+            emit GigValidated(
+                _gigId,
+                true,
+                gig.ditoCredits
+            );
+        } else {
+            emit GigValidated(_gigId, false, 0);
+        }
     }
 
-    function getOwnedGigs(address owner) public view returns (uint256[] memory) {
-        return ownersToGigs[owner];
-    }
+    function _changeStatus(
+        uint256 _gigId,
+        GigStatuses.GigStatus _to
+    ) private {
+        require (
+            GigStatuses.isTransitionAllowed(gigs[_gigId].status, _to), 
+            "Status change not allowed"
+        );
 
-    function getCompletedGigs(address taker) public view returns (uint256[] memory) {
-        return completedGigs[taker];
+        require(
+            isValidated[_gigId],
+            "Gig creation not yet validated."
+        );
+
+        gigs[_gigId].status = _to;
+        isValidated[_gigId] = false;
     }
-}
+}   
