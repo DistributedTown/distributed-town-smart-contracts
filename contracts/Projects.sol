@@ -66,8 +66,8 @@ contract Projects is IERC721Metadata, ERC721 {
     }
 
     // TODO: check if the community is calling this function
-    function getProjectTreasuryAddress(uint256 projectId) public view returns(address) {
-        return projectToTreasury[projectId];
+    function getProjectTreasuryAddress(uint256 project) public view returns(address) {
+        return projectToTreasury[project];
     }
 
     function getCommunityProjects(address communityAddress) public view returns(uint256[] memory projectIds) {

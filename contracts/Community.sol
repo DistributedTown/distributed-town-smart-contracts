@@ -85,17 +85,17 @@ contract Community {
         ISkillWallet skillWallet =
             ISkillWallet(distributedTown.skillWalletAddress());
         skillWallet.create(newMemberAddress, skillSet, uri);
-        uint256 tokenId = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
+        uint256 token = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
 
         // get the skills from chainlink
         ditoCredit.addToWhitelist(newMemberAddress);
         ditoCredit.transfer(newMemberAddress, credits);
 
-        skillWalletIds.push(tokenId);
+        skillWalletIds.push(token);
         isMember[newMemberAddress] = true;
         activeMembersCount++;
 
-        emit MemberAdded(newMemberAddress, tokenId, credits);
+        emit MemberAdded(newMemberAddress, token, credits);
     }
 
     function join(uint256 skillWalletTokenId, uint256 credits) public {
@@ -141,15 +141,15 @@ contract Community {
     }
 
     function getTokenId() public view returns (uint256) {
-        uint256 tokenId =
+        uint256 token =
             distributedTown.communityAddressToTokenID(address(this));
-        return tokenId;
+        return token;
     }
 
     function getTemplate() public view returns (uint256) {
-        uint256 tokenId =
+        uint256 token =
             distributedTown.communityAddressToTokenID(address(this));
-        uint256 templateId = distributedTown.communityToTemplate(tokenId);
+        uint256 templateId = distributedTown.communityToTemplate(token);
         return templateId;
     }
 
