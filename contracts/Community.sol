@@ -47,8 +47,9 @@ contract Community {
     constructor(string memory _url) public {
         metadataUri = _url;
         distributedTown = DistributedTown(msg.sender);
-
-        ditoCredit = new DITOCredit();
+        address[] memory defaultOperators = new address[](1);
+        defaultOperators[0] = address(this); 
+        ditoCredit = new DITOCredit(defaultOperators);
         treasury = new Treasury(address(ditoCredit));
         joinNewMember(0, 0, 0, 0, 0, 0, _url, 2006 * 1e18);
     }

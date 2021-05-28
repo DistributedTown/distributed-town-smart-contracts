@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.10;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @dev Implementation of the SkillWallet token for the DistributedTown project.
  * @author DistributedTown
  */
-contract DITOCredit is ERC20, Ownable {
+contract DITOCredit is ERC777, Ownable {
     event AddedToWhitelist(address _communityMember);
     event RemovedFromWhitelist(address _communityMember);
 
@@ -21,9 +21,12 @@ contract DITOCredit is ERC20, Ownable {
         _;
     }
 
-    constructor() ERC20("DiTo", "DITO") public {
+    constructor(address[] memory defaultOperators)
+        public
+        ERC777("DiTo", "DITO", defaultOperators)
+    {
         whitelist[msg.sender] = true;
-        _mint(msg.sender, 96000 * 1e18);
+        _mint(msg.sender, 96000 * 1e18, "", "");
     }
 
     /**
@@ -52,6 +55,7 @@ contract DITOCredit is ERC20, Ownable {
         onlyInWhitelist
         returns (bool)
     {
+        require(whitelist[recipient], 'Recipient should be whitelisted');
         return super.transfer(recipient, amount);
     }
 
@@ -61,6 +65,7 @@ contract DITOCredit is ERC20, Ownable {
         onlyInWhitelist
         returns (bool)
     {
+        require(whitelist[spender], 'Recipient should be whitelisted');
         return super.approve(spender, amount);
     }
 
@@ -69,24 +74,25 @@ contract DITOCredit is ERC20, Ownable {
         address recipient,
         uint256 amount
     ) public override onlyInWhitelist returns (bool) {
-        return super.transferFrom(sender, recipient, amount);
+        require(whitelist[recipient], 'Recipient should be whitelisted');
+        _send(sender, recipient, amount, "", "", false);
+        return true;
     }
 
-    function increaseAllowance(address spender, uint256 addedValue)
-        public
-        override
-        onlyInWhitelist
-        returns (bool)
-    {
-        return super.increaseAllowance(spender, addedValue);
+    function authorizeOperator(address operator) public virtual override {
+        require(false, "Only Community.sol can be an operator.");
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue)
-        public
-        override
-        onlyInWhitelist
-        returns (bool)
-    {
-        return super.decreaseAllowance(spender, subtractedValue);
+    function revokeOperator(address operator) public virtual override {
+        require(false, "Community.sol cannot be removed from the operators.");
+    }
+
+    function send(
+        address recipient,
+        uint256 amount,
+        bytes memory data
+    ) public virtual override onlyInWhitelist {
+        require(whitelist[recipient], 'Recipient should be whitelisted');
+        _send(_msgSender(), recipient, amount, data, "", false);
     }
 }
