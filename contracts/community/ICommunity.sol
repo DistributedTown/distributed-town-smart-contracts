@@ -29,14 +29,14 @@ interface ICommunity {
         uint256 credits
     ) external;
 
-    function join(uint256 skillWalletTokenId, uint256 credits) external; 
+    function join(uint256 skillWalletTokenId, uint256 credits) external;
 
     function leave(address memberAddress) external;
 
     function getMembers() external view returns (uint256[] memory);
 
     // TODO: check called only by milestones!
-    function transferToTreasury(uint256 amount) external;
+    function transferTo(address to, uint256 amount) external;
 
     function getTokenId() external view returns (uint256);
 
@@ -53,4 +53,8 @@ interface ICommunity {
         external
         view
         returns (address);
+
+    function balanceOf(address member) external view returns (uint256);
+
+    function transferCredits(address to, uint256 amount) external;
 }

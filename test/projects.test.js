@@ -4,7 +4,7 @@ const { solidity } = require("ethereum-waffle");
 
 use(solidity);
 
-describe.only("Projects", function () {
+describe("Projects", function () {
 
   let skillWalletInstance;
   let provider;

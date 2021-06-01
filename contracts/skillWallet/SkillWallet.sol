@@ -1,8 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
+
 import "./ISkillWallet.sol";
-import "./CommonTypes.sol";
+import "../CommonTypes.sol";
+
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";

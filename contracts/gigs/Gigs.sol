@@ -5,48 +5,30 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "./GigStatuses.sol";
-import "./Community.sol";
 
-contract Gigs is IERC721Metadata, ERC721 {
+import "./IGigs.sol";
+import "./GigStatuses.sol";
+import "../community/Community.sol";
+
+contract Gigs is IGigs, IERC721Metadata, ERC721 {
     using Counters for Counters.Counter;
 
-    event GigCreated(address _creator, uint256 _gigId);
-    event GigCompleted(uint256 _gigId);
-    event GigTaken(uint256 _gigId);
-    event GigSubmitted(uint256 _gigId);
-    event GigValidated(
-        uint256 _gigId,
-        bool transferedCredits,
-        uint256 creditsTransfered
-    );
-
     Counters.Counter gigId;
-
-    struct Gig {
-        address creator;
-        address taker;
-        uint256 ditoCredits;
-        GigStatuses.GigStatus status;
-    }
 
     mapping(uint256 => Gig) public gigs;
     mapping(uint256 => bool) public isValidated;
     Community community;
 
-    constructor()
-        public ERC721("Gigs", "GIG")
-    {
+    constructor() public ERC721("Gigs", "GIG") {
         community = Community(msg.sender);
     }
-
 
     // in the metadata uri - skills, title, description
     function createGig(
         address creator,
         uint256 _ditoCredits,
         string memory _metadataUrl
-    ) public {
+    ) public override {
         // TODO: verify identity chainlink!
         require(
             community.isMember(creator),
@@ -58,10 +40,15 @@ contract Gigs is IERC721Metadata, ERC721 {
             "Invalid credits amount."
         );
 
-        uint256 newGigId = gigId.current();
+        uint256 creatorsBalance = community.balanceOf(creator);
+        require(creatorsBalance >= _ditoCredits, "Insufficient dito balance");
 
+        uint256 newGigId = gigId.current();
         _mint(creator, newGigId);
         _setTokenURI(newGigId, _metadataUrl);
+
+        community.transferTo(address(community), _ditoCredits);
+
         gigs[newGigId] = Gig(
             creator,
             address(0),
@@ -75,11 +62,8 @@ contract Gigs is IERC721Metadata, ERC721 {
         emit GigCreated(creator, newGigId);
     }
 
-    function takeGig(uint256 _gigId, address taker) public {
-        require(
-            ownerOf(_gigId) != taker,
-            "The creator can't take the gig"
-        );
+    function takeGig(uint256 _gigId, address taker) public override {
+        require(ownerOf(_gigId) != taker, "The creator can't take the gig");
         require(
             community.isMember(taker),
             "The taker should be a community member."
@@ -92,7 +76,7 @@ contract Gigs is IERC721Metadata, ERC721 {
         emit GigTaken(_gigId);
     }
 
-    function submitGig(uint256 _gigId, address submitter) public {
+    function submitGig(uint256 _gigId, address submitter) public override {
         require(
             gigs[_gigId].taker == submitter,
             "Only the taker can submit the gig!"
@@ -103,7 +87,7 @@ contract Gigs is IERC721Metadata, ERC721 {
         emit GigSubmitted(_gigId);
     }
 
-    function completeGig(uint256 _gigId, address completor) public {
+    function completeGig(uint256 _gigId, address completor) public override {
         require(
             gigs[_gigId].creator == completor,
             "Can be completed only by the creator."
@@ -114,40 +98,29 @@ contract Gigs is IERC721Metadata, ERC721 {
         emit GigCompleted(_gigId);
     }
 
-    function validate(uint256 _gigId) public {
+    // callback of SW validate should call this.
+    function markAsValid(uint256 _gigId) public override {
         // Chainlink validate hash
         isValidated[_gigId] = true;
         Gig memory gig = gigs[_gigId];
 
         if (gig.status == GigStatuses.GigStatus.Completed) {
-            // how to transfer when the msg.sender isn't the user?
-            // approved?
-            // community.transfer(Gig.ditoCredits);
-            emit GigValidated(
-                _gigId,
-                true,
-                gig.ditoCredits
-            );
+            community.transferCredits(gig.taker, gig.ditoCredits);
+            emit GigValidated(_gigId, true, gig.ditoCredits);
         } else {
             emit GigValidated(_gigId, false, 0);
         }
     }
 
-    function _changeStatus(
-        uint256 _gigId,
-        GigStatuses.GigStatus _to
-    ) private {
-        require (
-            GigStatuses.isTransitionAllowed(gigs[_gigId].status, _to), 
+    function _changeStatus(uint256 _gigId, GigStatuses.GigStatus _to) private {
+        require(
+            GigStatuses.isTransitionAllowed(gigs[_gigId].status, _to),
             "Status change not allowed"
         );
 
-        require(
-            isValidated[_gigId],
-            "Gig creation not yet validated."
-        );
+        require(isValidated[_gigId], "Gig creation not yet validated.");
 
         gigs[_gigId].status = _to;
         isValidated[_gigId] = false;
     }
-}   
+}

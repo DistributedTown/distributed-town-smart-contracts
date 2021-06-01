@@ -7,9 +7,10 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+
 import "./ProjectTreasury.sol";
-import "./Community.sol";
-import "./ISkillWallet.sol";
+import "../community/Community.sol";
+import "../skillWallet/ISkillWallet.sol";
 
 contract Projects is IERC721Metadata, ERC721 {
     event ProjectCreated(
