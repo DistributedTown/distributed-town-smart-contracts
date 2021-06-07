@@ -17,9 +17,9 @@ contract Treasury is IERC721Receiver {
     address private communityAddress;
     uint256 private constant THREASHOLD = 3840 * 1e18;
 
-    constructor(address ditoCreditsAddress) public {
+    constructor(address ditoCreditsAddress, address communityAddress) public {
         ditoCredits = DITOCredit(ditoCreditsAddress);
-        communityAddress = msg.sender;
+        communityAddress = communityAddress;
     }
 
     function returnCreditsIfThresholdReached() public {

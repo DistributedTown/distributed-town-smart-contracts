@@ -95,9 +95,9 @@ contract DistributedTown is ERC1155, ERC1155Holder {
     function deployGenesisCommunities(uint256 template) public {
         require(
             communityTokenIds.current() < 3,
-            ""
+            "asdasdasd"
         );
-        require(template >= 0 && template <= 2, '');
+        require(template >= 0 && template <= 2, 'adasdasdasdsa');
         string[3] memory metadata =
             [
                 "https://hub.textile.io/ipfs/bafkreick7p4yms7cmwnmfizmcl5e6cdpij4jsl2pkhk5cejn744uwnziny",
@@ -106,13 +106,14 @@ contract DistributedTown is ERC1155, ERC1155Holder {
             ];
         uint256 newItemId = communityTokenIds.current();
         _mint(address(this), template, 1, "");
-        address comAddr = address(new Community(metadata[template], addressProvider));
+        Community community = new Community(metadata[template], addressProvider);
+        address comAddr = address(community);
 
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = 0;
         communities.push(comAddr);
-        communityTokenIds.increment();
+        communityTokenIds.increment();  
 
-        emit CommunityCreated(comAddr, newItemId, 2, msg.sender);
+        emit CommunityCreated(address(0), newItemId, 2, msg.sender);
     }
 }

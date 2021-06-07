@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
+import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 
 /**
  * @title DistributedTown Community
@@ -9,7 +10,7 @@ pragma experimental ABIEncoderV2;
  * @author DistributedTown
  */
 
-interface ICommunity {
+interface ICommunity is IERC777Recipient {
     event MemberAdded(
         address indexed _member,
         uint256 _skillWalletTokenId,
@@ -36,7 +37,7 @@ interface ICommunity {
     function getMembers() external view returns (uint256[] memory);
 
     // TODO: check called only by milestones!
-    function transferTo(address to, uint256 amount) external;
+    function transferToCommunity(address from, uint256 amount) external;
 
     function getTokenId() external view returns (uint256);
 

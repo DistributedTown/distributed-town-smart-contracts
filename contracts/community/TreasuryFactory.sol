@@ -5,7 +5,7 @@ import "./Treasury.sol";
 
 contract TreasuryFactory {
     function deploy(address ditoCredit) public returns (address) {
-        Treasury treasury = new Treasury(ditoCredit);
+        Treasury treasury = new Treasury(ditoCredit, msg.sender);
         // community.transferOwnership(msg.sender);
 
         return address(treasury);

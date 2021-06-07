@@ -5,9 +5,7 @@ import "./Gigs.sol";
 
 contract GigsFactory {
     function deploy() public returns (address) {
-        Gigs gigs = new Gigs();
-        // community.transferOwnership(msg.sender);
-
+        Gigs gigs = new Gigs(msg.sender);
         return address(gigs);
     }
 }

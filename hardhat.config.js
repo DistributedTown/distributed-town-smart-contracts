@@ -2,9 +2,10 @@ const { utils } = require("ethers");
 const fs = require("fs");
 const chalk = require("chalk");
 
+require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly")
-
+require("hardhat-erc1820");
 require("@nomiclabs/hardhat-etherscan");
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;

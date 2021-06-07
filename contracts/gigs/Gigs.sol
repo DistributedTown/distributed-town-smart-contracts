@@ -19,8 +19,8 @@ contract Gigs is IGigs, IERC721Metadata, ERC721 {
     mapping(uint256 => bool) public isValidated;
     Community community;
 
-    constructor() public ERC721("Gigs", "GIG") {
-        community = Community(msg.sender);
+    constructor(address communityAddress) public ERC721("Gigs", "GIG") {
+        community = Community(communityAddress);
     }
 
     // in the metadata uri - skills, title, description
@@ -47,7 +47,7 @@ contract Gigs is IGigs, IERC721Metadata, ERC721 {
         _mint(creator, newGigId);
         _setTokenURI(newGigId, _metadataUrl);
 
-        community.transferTo(address(community), _ditoCredits);
+        community.transferToCommunity(creator, _ditoCredits);
 
         gigs[newGigId] = Gig(
             creator,
