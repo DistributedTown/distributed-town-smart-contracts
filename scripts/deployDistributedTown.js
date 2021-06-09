@@ -9,13 +9,24 @@ const main = async () => {
     const skillWalletAddress = "0xabD7A12E094D7b1A545F3757B7fb06834297d2e3";
 
     console.log("\n\n 📡 Deploying...\n");
+    // const gigStatuses = await deploy('GigStatuses');
+    // await gigStatuses.deployed();
 
-    const distributedTown = await deploy("DistributedTown", ['http://someurl.io', skillWalletAddress]);
+    const addressProvider = await deploy('AddressProvider', [], {},
+        {
+            GigStatuses: '0xcB1457EC6772D7d019B61718eb941bE4f6f61EfC'
+        });
+    await addressProvider.deployed();
+    const distributedTown = await deploy("DistributedTown", ['http://someurl.io', skillWalletAddress, addressProvider.address]);
     await distributedTown.deployed();
-    await distributedTown.deployGenesisCommunities(0);
-    await distributedTown.deployGenesisCommunities(1);
-    await distributedTown.deployGenesisCommunities(2);
-    
+    const a = await distributedTown.deployGenesisCommunities(0, {
+        // The maximum units of gas for the transaction to use
+        gasLimit: 2300000
+    });
+    console.log(a);
+    // await distributedTown.deployGenesisCommunities(1);
+    // await distributedTown.deployGenesisCommunities(2);
+
     const coms = await distributedTown.getCommunities();
     console.log(coms);
 

@@ -1,106 +1,104 @@
-const { ethers } = require("hardhat");
-const { use, expect } = require("chai");
-const { solidity } = require("ethereum-waffle");
+const { expectEvent, singletons, constants } = require('@openzeppelin/test-helpers');
+const { assert } = require('chai');
+const { ZERO_ADDRESS } = constants;
+const truffleAssert = require('truffle-assertions');
 
-use(solidity);
+const GigStatuses = artifacts.require('GigStatuses');
+const DistributedTown = artifacts.require('DistributedTown');
+const Community = artifacts.require('Community');
+const SkillWallet = artifacts.require('SkillWallet');
+const AddressProvider = artifacts.require('AddressProvider');
+const Projects = artifacts.require('Projects');
+const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
+var BN = web3.utils.BN;
 
-describe("Projects", function () {
+contract('Projects', function ([_, registryFunder, creator, member]) {
 
-  let skillWalletInstance;
-  let provider;
-  let communityInstance;
-  let memberAddress;
-  let memberTokenId;
+    before(async function () {
+        this.erc1820 = await singletons.ERC1820Registry(registryFunder);
+        this.gigStatuses = await GigStatuses.new();
+        AddressProvider.link(this.gigStatuses);
+        this.addressProvder = await AddressProvider.new();
 
-  before(async function () {
-    const [signer] = await ethers.getSigners();
-    memberAddress = signer.address;
-    // Deploy instances
-    const DistributedTownFactory = await ethers.getContractFactory("DistributedTown");
-    const ProjectFactory = await ethers.getContractFactory("Projects");
-    const SkillWalletFactory = await ethers.getContractFactory("SkillWallet");
-    const CommunityFactory = await ethers.getContractFactory("Community");
-    
-    const oracle = '0xb5BA7f14Fe0205593255c77875348281b44DE7BF';
-    const jobId = ethers.utils.toUtf8Bytes('55d24f869f804405a4bfaff02fd52e5f')
+        this.skillWallet = await SkillWallet.new('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876', { from: creator });
+        this.distirbutedTown = await DistributedTown.new('http://someurl.co', this.skillWallet.address, this.addressProvder.address, { from: creator });
+        await this.distirbutedTown.deployGenesisCommunities(0, { from: creator });
+        await this.distirbutedTown.deployGenesisCommunities(1, { from: creator });
+        const communities = await this.distirbutedTown.getCommunities();
+        this.community = await Community.at(communities[0]);
+        this.community1 = await Community.at(communities[1]);
+        const gigsAddr = await this.community.gigsAddr();
+        this.projects = await Projects.new(this.skillWallet.address);
+        const tx = await this.community.joinNewMember(1, 1, 2, 2, 3, 3, 'http://someuri.co', web3.utils.toWei(new BN(2006)), { from: member });
+        memberAddress = member;
+    });
+    describe('Creating a project', async function () {
 
-    skillWalletInstance = await SkillWalletFactory.deploy(oracle, jobId);
+        it("should fail when the creator doesn't have a skill wallet", async function () {
 
-    await skillWalletInstance.deployed();
+            const tx = this.projects.createProject(
+                metadataUrl,
+                this.community.address,
+                '0x093ECac1110EF08976A0A1F24393c3e48936489D',
+            );
 
-    provider = skillWalletInstance.provider;
+            await truffleAssert.reverts(
+                tx,
+                "Only a registered skill wallet can create a project."
+            );
+        });
+        it("should fail when the creators skill wallet is not activated", async function () {
 
-    let blockNumber = await provider.getBlockNumber();
-    console.log("Current block number", blockNumber);
+            const tx = this.projects.createProject(
+                metadataUrl,
+                this.community.address,
+                memberAddress,
+            );
 
-    distributedTownInstance = await DistributedTownFactory.deploy('http://someurl.co', skillWalletInstance.address);
-    await distributedTownInstance.deployed();
-    await distributedTownInstance.deployGenesisCommunities(0);
-    await distributedTownInstance.deployGenesisCommunities(1);
-    await distributedTownInstance.deployGenesisCommunities(2);
-    
-    const communityAddresses = await distributedTownInstance.getCommunities();
-    communityInstance = await CommunityFactory.attach(communityAddresses[0]);
-    
-    const memberTx = await communityInstance.joinNewMember(1, 1, 2, 2, 3, 3, 'http://someuri.co', 2006);
-    const txReceipt = await memberTx.wait();
+            await truffleAssert.reverts(
+                tx,
+                "Only an active skill wallet can create a project."
+            );
+        });
+        it("should fail when the creator isn't a part of the community", async function () {
+            const skillWalletId = await this.skillWallet.getSkillWalletIdByOwner(memberAddress);
+            const skillWalletActivated = await this.skillWallet.isSkillWalletActivated(skillWalletId);
+            
+            if(!skillWalletActivated) {
+                const activateTx = await this.skillWallet.activateSkillWallet(skillWalletId, '', {from: creator});
+                const skillWalletActivatedEvent = activateTx.logs[0].event === 'SkillWalletActivated'
+                assert.equal(skillWalletActivatedEvent, true);
+            }
 
-    const memberAddedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'MemberAdded');
-    memberTokenId = memberAddedEvent.args[1];
+            const tx = this.projects.createProject(
+                metadataUrl,
+                this.community1.address,
+                memberAddress,
+            );
 
-    await skillWalletInstance.activateSkillWallet(memberTokenId, '');
+            await truffleAssert.reverts(
+                tx,
+                "Only a member of the community can create a project."
+            );
+        });
+        it('should create a project', async function () {
+            const skillWalletId = await this.skillWallet.getSkillWalletIdByOwner(memberAddress);
+            const skillWalletActivated = await this.skillWallet.isSkillWalletActivated(skillWalletId);
+            if(!skillWalletActivated) {
+                const activateTx = await this.skillWallet.activateSkillWallet(skillWalletId, '', {from: creator});
+                const skillWalletActivatedEvent = activateTx.logs[1].event === 'SkillWalletActivated'
+                assert.equal(skillWalletActivatedEvent, true);
+            }
+           
+            const tx = await this.projects.createProject(
+                metadataUrl,
+                this.community.address,
+                memberAddress,
+            );
+            const projectCreatedEvent = tx.logs[1].event === 'ProjectCreated'
 
-    const projectAddress = await distributedTownInstance.projectsAddress();
-    projectsInstance = await ProjectFactory.attach(projectAddress)
-    await projectsInstance.deployed();
+            assert.equal(projectCreatedEvent, true);
 
-  })
-  describe("Projects", function () {
-
-    describe("createProject()", async function () {
-      it("Should fail when the user doesn't have a skill wallet", async function () {
-        const communities = await distributedTownInstance.getCommunities();
-        console.log(communities);
-        const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
-
-        const tx = await projectsInstance.createProject(
-          metadataUrl,
-          communities[0],
-          '0x093ECac1110EF08976A0A1F24393c3e48936489D'
-        );
-        const txReceipt = await tx.wait();
-        const projectCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'ProjectCreated');
-        const address = projectCreatedEvent.args[0];
-        const tokenId = projectCreatedEvent.args[1];
-        const template = projectCreatedEvent.args[2];
-
-        const uri = await projectsInstance.uri(tokenId);
-        const owner = await projectsInstance.ownerOf(tokenId);
-
-        expect(uri).to.eq(metadataUrl);
-      });
-
-      it("Should work when the user has an active skill wallet", async function () {
-        const communities = await distributedTownInstance.getCommunities();
-        const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
-
-        const tx = await projectsInstance.createProject(
-          metadataUrl,
-          communities[0],
-          memberAddress
-        );
-        const txReceipt = await tx.wait();
-        const projectCreatedEvent = txReceipt.events.find(txReceiptEvent => txReceiptEvent.event === 'ProjectCreated');
-        const address = projectCreatedEvent.args[0];
-        const tokenId = projectCreatedEvent.args[1];
-        const template = projectCreatedEvent.args[2];
-
-        const uri = await projectsInstance.tokenURI(tokenId);
-        const owner = await projectsInstance.ownerOf(tokenId);
-
-        expect(uri).to.eq(metadataUrl);
-        expect(owner).to.eq(memberAddress);
-      });
-    })
-  });
+        });
+    });
 });

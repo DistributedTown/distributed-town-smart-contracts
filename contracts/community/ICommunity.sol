@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
-import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 
 /**
  * @title DistributedTown Community
@@ -10,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
  * @author DistributedTown
  */
 
-interface ICommunity is IERC777Recipient {
+interface ICommunity {
     event MemberAdded(
         address indexed _member,
         uint256 _skillWalletTokenId,

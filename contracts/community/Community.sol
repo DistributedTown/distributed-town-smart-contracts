@@ -14,7 +14,7 @@ import "../DistributedTown.sol";
 import "../projects/Projects.sol";
 import "../skillWallet/ISkillWallet.sol";
 import "../AddressProvider.sol";
-import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
+import "./ERC777Recipient.sol";
 
 /**
  * @title DistributedTown Community
@@ -25,9 +25,6 @@ import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
 
 contract Community is ICommunity {
     string public metadataUri;
-    IERC1820Registry private _erc1820 =
-        IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
-    bytes32 constant private TOKENS_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
 
     uint16 public activeMembersCount;
     uint256 public scarcityScore;
@@ -39,27 +36,24 @@ contract Community is ICommunity {
     address public ditoCreditsAddr;
     address public treasuryAddr;
     address public gigsAddr;
+    address public erc777Recipient;
     uint256[] projectIds;
 
     // add JSON Schema base URL
     constructor(string memory _url, address _addrProvider) public {
         metadataUri = _url;
         distributedTownAddr = msg.sender;
-        _erc1820.setInterfaceImplementer(
-            address(this),
-            TOKENS_RECIPIENT_INTERFACE_HASH,
-            address(this)
-        );
-
+        
         AddressProvider provider = AddressProvider(_addrProvider);
+        erc777Recipient = address(new ERC777Recipient());
         DiToCreditsFactory creditsFactory =
             DiToCreditsFactory(provider.ditoTokenFactory());
-        ditoCreditsAddr = creditsFactory.deploy();
+        ditoCreditsAddr = creditsFactory.deploy(erc777Recipient);
         treasuryAddr = TreasuryFactory(provider.treasuryFactory()).deploy(
             ditoCreditsAddr
         );
         gigsAddr = GigsFactory(provider.gigsFactory()).deploy();
-        joinNewMember(0, 0, 0, 0, 0, 0, _url, 2006 * 1e18);
+        joinNewMember(0, 0, 0, 0, 0, 0, _url, 2000 * 1e18);
     }
 
     // check if it's called only from deployer.
@@ -76,6 +70,10 @@ contract Community is ICommunity {
         require(
             activeMembersCount <= 24,
             "There are already 24 members, sorry!"
+        );
+        require(
+            !isMember[msg.sender],
+            "Already a member"
         );
 
         // the DiTo contract can only join the treasury as a member of the community
@@ -98,7 +96,7 @@ contract Community is ICommunity {
 
         // get the skills from chainlink
         DITOCredit(ditoCreditsAddr).addToWhitelist(newMemberAddress);
-        DITOCredit(ditoCreditsAddr).transfer(newMemberAddress, credits);
+        DITOCredit(ditoCreditsAddr).operatorSend(erc777Recipient, newMemberAddress, credits, '', '');
 
         skillWalletIds.push(token);
         isMember[newMemberAddress] = true;
@@ -165,7 +163,7 @@ contract Community is ICommunity {
         );
         DITOCredit(ditoCreditsAddr).operatorSend(
             from,
-            address(this),
+            erc777Recipient,
             amount,
             "",
             ""
@@ -195,7 +193,7 @@ contract Community is ICommunity {
     }
 
     function balanceOf(address member) public view override returns (uint256) {
-        require(isMember[member], "Not a member of the community");
+        require(isMember[member] || erc777Recipient == member, "Not a member of the community");
         return DITOCredit(ditoCreditsAddr).balanceOf(member);
     }
 
@@ -218,13 +216,4 @@ contract Community is ICommunity {
             Projects(DistributedTown(distributedTownAddr).projectsAddress());
         return projects.getProjectTreasuryAddress(projectId);
     }
-
-    function tokensReceived(
-        address operator,
-        address from,
-        address to,
-        uint256 amount,
-        bytes calldata userData,
-        bytes calldata operatorData
-    ) public override {}
 }

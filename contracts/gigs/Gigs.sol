@@ -36,7 +36,7 @@ contract Gigs is IGigs, IERC721Metadata, ERC721 {
         );
         // TODO: Calculate credits with chainlink
         require(
-            _ditoCredits >= 6 && _ditoCredits <= 720,
+            _ditoCredits >= 6 * 1e18 && _ditoCredits <= 720 * 1e18,
             "Invalid credits amount."
         );
 

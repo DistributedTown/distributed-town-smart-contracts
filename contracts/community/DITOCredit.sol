@@ -26,10 +26,10 @@ contract DITOCredit is ERC777, Ownable {
      * The default operator for all token holders is the community contract
      * There will be no other operators allowed.
      */
-    constructor(address communityAddress, address[] memory _defaultOperators) public ERC777("DiTo", "DITO", _defaultOperators) {
+    constructor(address communityTokenHolder, address[] memory _defaultOperators) public ERC777("DiTo", "DITO", _defaultOperators) {
         require(_defaultOperators.length > 0, "No default operators passed!");
-        whitelist[communityAddress] = true;
-        _mint(communityAddress, 96000 * 1e18, "", "");
+        whitelist[communityTokenHolder] = true;
+        _mint(communityTokenHolder, 96000 * 1e18, "", "");
     }
 
     /**
@@ -65,7 +65,7 @@ contract DITOCredit is ERC777, Ownable {
         uint256 amount,
         bytes calldata data,
         bytes calldata operatorData
-    ) public override onlyInWhitelist {
+    ) public override onlyOwner {
         require(whitelist[recipient], "Recipient should be whitelisted");
         super.operatorSend(sender, recipient, amount, data, operatorData);
     }
