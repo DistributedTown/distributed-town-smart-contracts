@@ -12,6 +12,7 @@ const AddressProvider = artifacts.require('AddressProvider');
 const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
 var BN = web3.utils.BN;
 
+
 contract('Gigs', function ([_, registryFunder, creator, firstMember, secondMember, thirdMember, notAMember]) {
 
     before(async function () {
