@@ -63,12 +63,14 @@ contract Gigs is IGigs, IERC721Metadata, ERC721 {
     }
 
     function takeGig(uint256 _gigId, address taker) public override {
+        require(gigs[_gigId].creator != address(0), "Invalid gigId");
+        require(gigs[_gigId].taker == address(0), 'The gig is already taken.');
         require(ownerOf(_gigId) != taker, "The creator can't take the gig");
         require(
             community.isMember(taker),
             "The taker should be a community member."
         );
-
+        require(isValidated[_gigId], 'The gig should be validated by the creator.');
         _changeStatus(_gigId, GigStatuses.GigStatus.Taken);
 
         gigs[_gigId].taker = taker;
@@ -77,21 +79,26 @@ contract Gigs is IGigs, IERC721Metadata, ERC721 {
     }
 
     function submitGig(uint256 _gigId, address submitter) public override {
+        require(gigs[_gigId].creator != address(0), "Invalid gigId");
+        require(gigs[_gigId].status == GigStatuses.GigStatus.Taken, "Gig not taken yet.");
         require(
             gigs[_gigId].taker == submitter,
-            "Only the taker can submit the gig!"
+            "Only the taker can submit the gig"
         );
-
+        require(isValidated[_gigId], 'The gig should be validated by the creator.');
         _changeStatus(_gigId, GigStatuses.GigStatus.Submitted);
 
         emit GigSubmitted(_gigId);
     }
 
     function completeGig(uint256 _gigId, address completor) public override {
+        require(gigs[_gigId].creator != address(0), "Invalid gigId");
         require(
             gigs[_gigId].creator == completor,
             "Can be completed only by the creator."
         );
+        require(isValidated[_gigId], 'The gig should be validated by the creator.');
+        require(gigs[_gigId].status == GigStatuses.GigStatus.Submitted, "Gig not submitted yet.");
 
         _changeStatus(_gigId, GigStatuses.GigStatus.Completed);
 

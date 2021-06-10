@@ -14,7 +14,7 @@ import "../DistributedTown.sol";
 import "../projects/Projects.sol";
 import "../skillWallet/ISkillWallet.sol";
 import "../AddressProvider.sol";
-import "./ERC777Recipient.sol";
+import "./DiToCreditCommunityHolder.sol";
 
 /**
  * @title DistributedTown Community
@@ -36,19 +36,19 @@ contract Community is ICommunity {
     address public ditoCreditsAddr;
     address public treasuryAddr;
     address public gigsAddr;
-    address public erc777Recipient;
+    address public ditoCreditsHolder;
     uint256[] projectIds;
 
     // add JSON Schema base URL
     constructor(string memory _url, address _addrProvider) public {
         metadataUri = _url;
         distributedTownAddr = msg.sender;
-        
+
         AddressProvider provider = AddressProvider(_addrProvider);
-        erc777Recipient = address(new ERC777Recipient());
+        ditoCreditsHolder = address(new DiToCreditCommunityHolder());
         DiToCreditsFactory creditsFactory =
             DiToCreditsFactory(provider.ditoTokenFactory());
-        ditoCreditsAddr = creditsFactory.deploy(erc777Recipient);
+        ditoCreditsAddr = creditsFactory.deploy(ditoCreditsHolder);
         treasuryAddr = TreasuryFactory(provider.treasuryFactory()).deploy(
             ditoCreditsAddr
         );
@@ -71,10 +71,7 @@ contract Community is ICommunity {
             activeMembersCount <= 24,
             "There are already 24 members, sorry!"
         );
-        require(
-            !isMember[msg.sender],
-            "Already a member"
-        );
+        require(!isMember[msg.sender], "Already a member");
 
         // the DiTo contract can only join the treasury as a member of the community
         address newMemberAddress =
@@ -96,7 +93,13 @@ contract Community is ICommunity {
 
         // get the skills from chainlink
         DITOCredit(ditoCreditsAddr).addToWhitelist(newMemberAddress);
-        DITOCredit(ditoCreditsAddr).operatorSend(erc777Recipient, newMemberAddress, credits, '', '');
+        DITOCredit(ditoCreditsAddr).operatorSend(
+            ditoCreditsHolder,
+            newMemberAddress,
+            credits,
+            "",
+            ""
+        );
 
         skillWalletIds.push(token);
         isMember[newMemberAddress] = true;
@@ -151,8 +154,14 @@ contract Community is ICommunity {
             Treasury(treasuryAddr).returnCreditsIfThresholdReached();
         }
         // if gigs
-        else if (msg.sender == address(0)) {
-            DITOCredit(ditoCreditsAddr).transfer(to, amount);
+        else if (msg.sender == gigsAddr) {
+            DITOCredit(ditoCreditsAddr).operatorSend(
+                ditoCreditsHolder,
+                to,
+                amount,
+                "",
+                ""
+            );
         }
     }
 
@@ -163,7 +172,7 @@ contract Community is ICommunity {
         );
         DITOCredit(ditoCreditsAddr).operatorSend(
             from,
-            erc777Recipient,
+            ditoCreditsHolder,
             amount,
             "",
             ""
@@ -193,7 +202,10 @@ contract Community is ICommunity {
     }
 
     function balanceOf(address member) public view override returns (uint256) {
-        require(isMember[member] || erc777Recipient == member, "Not a member of the community");
+        require(
+            isMember[member] || ditoCreditsHolder == member,
+            "Not a member of the community"
+        );
         return DITOCredit(ditoCreditsAddr).balanceOf(member);
     }
 

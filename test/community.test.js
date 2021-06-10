@@ -27,7 +27,7 @@ contract('Community', function (accounts) {
         const communities = await this.distirbutedTown.getCommunities();
         this.community = await Community.at(communities[0]);
         this.community2 = await Community.at(communities[1]);
-
+        this.ditoCreditCommunityHolder = await this.community.ditoCreditsHolder();
         const gigsAddr = await this.community.gigsAddr();
         this.gigs = await Gigs.at(gigsAddr);
         const tx = await this.community.joinNewMember(1, 1, 2, 2, 3, 3, 'http://someuri.co', web3.utils.toWei(new BN(2006)), { from: accounts[3] });
@@ -54,15 +54,15 @@ contract('Community', function (accounts) {
         it("should transfer credits correctly", async function () {
 
             const userAddress = accounts[6];
-            const creditsHolderBalanceBefore = await this.community.balanceOf(await this.community.erc777Recipient());
+            const creditsHolderBalanceBefore = await this.community.balanceOf(this.ditoCreditCommunityHolder);
             const tx = await this.community.joinNewMember(1, 1, 2, 2, 3, 3, 'http://someuri.co', web3.utils.toWei(new BN(3000)), { from: accounts[6] });
-            const memberAddedEvent = tx.logs[0].event === 'MemberAdded'
+            const memberAddedEvent = tx.logs[0].event === 'MemberAdded';
             assert.equal(memberAddedEvent, true);
 
             const memberBalance = await this.community.balanceOf(userAddress);
             assert.equal(memberBalance.toString(), web3.utils.toWei(new BN(3000)).toString());
 
-            const creditsHolderBalanceAfter = await this.community.balanceOf(await this.community.erc777Recipient());
+            const creditsHolderBalanceAfter = await this.community.balanceOf(this.ditoCreditCommunityHolder);
             assert.equal((+web3.utils.fromWei(creditsHolderBalanceBefore.toString()) - 3000), +web3.utils.fromWei(creditsHolderBalanceAfter.toString()));
             
             const tokenId = tx.logs[0].args[1];
