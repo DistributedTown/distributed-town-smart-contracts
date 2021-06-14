@@ -7,8 +7,8 @@ const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
 
-    const oracle = '0x175246176F2c3FaE7dC470eF497e92bae3F30fec';
-    const jobId = ethers.utils.toUtf8Bytes('695247adb7244501a14e477b164eb3a0')
+    const oracle = '0xc8D925525CA8759812d0c299B90247917d4d4b7C';
+    const jobId = ethers.utils.toUtf8Bytes('f4b6aa4bec634966ac35f0550937f7ba')
     const skillWallet = await deploy("SkillWallet", [oracle, jobId]);
 
 

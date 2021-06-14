@@ -76,7 +76,7 @@ contract SkillWallet is
             "getNonceUrl",
             string(
                 abi.encodePacked(
-                    "https://api.distributed.town/api/skillwallet/",
+                    "https://api.skillwallet.id/api/skillwallet/",
                     tokenId.toString(),
                     "/nonces?action=",
                     action.toString()
@@ -87,7 +87,7 @@ contract SkillWallet is
             "delNonceUrl",
             string(
                 abi.encodePacked(
-                    "https://api.distributed.town/api/skillwallet/",
+                    "https://api.skillwallet.id/api/skillwallet/",
                     tokenId.toString(),
                     "/nonces?action=",
                     action.toString()
