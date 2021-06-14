@@ -1,4 +1,4 @@
-const SW = '0xb32039fd111d0CD95164b7e657bD75e5D085aD52';
+const SW = '0x37eabd1e1253dcD9dA3c15dd56881F931DbAA5Bf';
 var ethers = require('ethers');
 var abi = require('./artifacts/contracts/skillWallet/SkillWallet.sol/SkillWallet.json').abi;
 
@@ -104,10 +104,10 @@ async function validateSW(tokenId) {
 }
 
 async function test() {
-  // const tokenId = await createSW();
-  // await activateSW(tokenId);
+  const tokenId = await createSW();
+  await activateSW(tokenId);
 
-  const tokenId = 0;
+  // const tokenId = 0;
   await validateSW(tokenId);
 
 }
