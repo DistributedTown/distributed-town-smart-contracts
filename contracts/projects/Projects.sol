@@ -7,9 +7,10 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+
 import "./ProjectTreasury.sol";
-import "./Community.sol";
-import "./ISkillWallet.sol";
+import "../community/Community.sol";
+import "../skillWallet/ISkillWallet.sol";
 
 contract Projects is IERC721Metadata, ERC721 {
     event ProjectCreated(
@@ -66,8 +67,8 @@ contract Projects is IERC721Metadata, ERC721 {
     }
 
     // TODO: check if the community is calling this function
-    function getProjectTreasuryAddress(uint256 projectId) public view returns(address) {
-        return projectToTreasury[projectId];
+    function getProjectTreasuryAddress(uint256 project) public view returns(address) {
+        return projectToTreasury[project];
     }
 
     function getCommunityProjects(address communityAddress) public view returns(uint256[] memory projectIds) {

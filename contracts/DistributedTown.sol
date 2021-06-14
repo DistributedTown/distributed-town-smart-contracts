@@ -5,9 +5,10 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "./Community.sol";
-import "./ISkillWallet.sol";
-import "./Projects.sol";
+
+import "./projects/Projects.sol";
+import "./community/Community.sol";
+import "./skillWallet/ISkillWallet.sol";
 
 /**
  * @title DistributedTown Community
@@ -31,27 +32,27 @@ contract DistributedTown is ERC1155, ERC1155Holder {
     mapping(uint256 => uint256) public communityToTemplate;
     address[] public communities;
     address public projectsAddress;
-
     address public skillWalletAddress;
-    ISkillWallet skillWallet;
-    Projects projects;
+    address public communityFactoryAddress;
+    address addressProvider;
 
     // TODO Add JSON Schema base URL
-    constructor(string memory _url, address _skillWalletAddress)
+    constructor(string memory _url, address _skillWalletAddress, address _addrProvider)
         public
         ERC1155(_url)
     {
         // initialize pos values of the 3 templates;
         skillWalletAddress = _skillWalletAddress;
-        skillWallet = ISkillWallet(_skillWalletAddress);
-        projects = new Projects(_skillWalletAddress);
+        Projects projects = new Projects(_skillWalletAddress);
         projectsAddress = address(projects);
+        addressProvider = _addrProvider;
     }
 
     function createCommunity(
         string calldata communityMetadata,
         uint256 template
     ) public {
+        ISkillWallet skillWallet = ISkillWallet(skillWalletAddress);
         bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
         require(
             isRegistered,
@@ -73,14 +74,14 @@ contract DistributedTown is ERC1155, ERC1155Holder {
 
         // check if skill wallet is active
         // TODO: add skill wallet address
-        Community community = new Community(communityMetadata);
-        communityAddressToTokenID[address(community)] = newItemId;
+        address comAddr = address(new Community(communityMetadata, addressProvider));
+        communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
-        communities.push(address(community));
+        communities.push(comAddr);
 
         //TODO: add the creator as a community member
         emit CommunityCreated(
-            address(community),
+            comAddr,
             newItemId,
             template,
             msg.sender
@@ -94,9 +95,9 @@ contract DistributedTown is ERC1155, ERC1155Holder {
     function deployGenesisCommunities(uint256 template) public {
         require(
             communityTokenIds.current() < 3,
-            "Only 3 genesis communities can be created!"
+            "asdasdasd"
         );
-        require(template >= 0 && template <= 2, 'The genesis communities template must be one of the default ones.');
+        require(template >= 0 && template <= 2, 'adasdasdasdsa');
         string[3] memory metadata =
             [
                 "https://hub.textile.io/ipfs/bafkreick7p4yms7cmwnmfizmcl5e6cdpij4jsl2pkhk5cejn744uwnziny",
@@ -105,12 +106,14 @@ contract DistributedTown is ERC1155, ERC1155Holder {
             ];
         uint256 newItemId = communityTokenIds.current();
         _mint(address(this), template, 1, "");
-        Community community = new Community(metadata[template]);
-        communityAddressToTokenID[address(community)] = newItemId;
-        communityToTemplate[newItemId] = 0;
-        communities.push(address(community));
-        communityTokenIds.increment();
+        Community community = new Community(metadata[template], addressProvider);
+        address comAddr = address(community);
 
-        emit CommunityCreated(address(community), newItemId, 2, msg.sender);
+        communityAddressToTokenID[comAddr] = newItemId;
+        communityToTemplate[newItemId] = 0;
+        communities.push(comAddr);
+        communityTokenIds.increment();  
+
+        emit CommunityCreated(address(0), newItemId, 2, msg.sender);
     }
 }

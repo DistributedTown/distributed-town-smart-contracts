@@ -1,6 +1,6 @@
-const SW = '0x362335e25718b755cf7EB4D77c970d3103A5d4db';
+const SW = '0x37eabd1e1253dcD9dA3c15dd56881F931DbAA5Bf';
 var ethers = require('ethers');
-var abi = require('../artifacts/contracts/SkillWallet.sol/SkillWallet.json').abi;
+var abi = require('./artifacts/contracts/skillWallet/SkillWallet.sol/SkillWallet.json').abi;
 
 function mnemonic() {
   return "close gesture fatal vacant time toy general horror payment visit case you";
@@ -73,18 +73,18 @@ async function activateSW(tokenId) {
 }
 
 async function validateSW(tokenId) {
-  let overrides = {
-    // The maximum units of gas for the transaction to use
-    gasLimit: 2300000,
-  };
+  // let overrides = {
+  //   // The maximum units of gas for the transaction to use
+  //   gasLimit: 230000,
+  // };
 
   const pubKey = await contract.skillWalletToPubKey(0);
   console.log(pubKey);
   const createTx = await contract.validate(
     '9266a4aa1fe3bae8eaec10aab954ba560efdd976ca850b01e956b586121dbfbf275f2bde2071071fa08ed4d7b10626510300f1dc752c4924e85743a463b900761b',
     tokenId,
-    1,
-    overrides
+    1
+    // overrides
   );
 
   console.log(createTx);

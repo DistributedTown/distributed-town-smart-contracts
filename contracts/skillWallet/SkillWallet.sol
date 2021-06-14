@@ -1,8 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
+
 import "./ISkillWallet.sol";
-import "./CommonTypes.sol";
+import "../CommonTypes.sol";
+
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -45,10 +47,10 @@ contract SkillWallet is
     bytes32 private jobId;
     uint256 private fee;
 
-    constructor(address _oracle, bytes32 _jobId) public ERC721("SkillWallet", "SW") {
+    constructor() public ERC721("SkillWallet", "SW") {
         setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
-        oracle = _oracle;
-        jobId = _jobId;
+        oracle = 0xc8D925525CA8759812d0c299B90247917d4d4b7C;
+        jobId = "f4b6aa4bec634966ac35f0550937f7ba";
         fee = 0.1 * 10**18; // 0.1 LINK
     }
 
@@ -74,7 +76,7 @@ contract SkillWallet is
             "getNonceUrl",
             string(
                 abi.encodePacked(
-                    "https://api.distributed.town/api/skillwallet/",
+                    "https://api.skillwallet.id/api/skillwallet/",
                     tokenId.toString(),
                     "/nonces?action=",
                     action.toString()
@@ -85,7 +87,7 @@ contract SkillWallet is
             "delNonceUrl",
             string(
                 abi.encodePacked(
-                    "https://api.distributed.town/api/skillwallet/",
+                    "https://api.skillwallet.id/api/skillwallet/",
                     tokenId.toString(),
                     "/nonces?action=",
                     action.toString()

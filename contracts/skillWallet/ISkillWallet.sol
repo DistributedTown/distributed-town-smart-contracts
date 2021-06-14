@@ -4,7 +4,7 @@ pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-import "./CommonTypes.sol";
+import "../CommonTypes.sol";
 
 interface ISkillWallet is IERC721 {
 

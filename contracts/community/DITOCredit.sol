@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title DiTo ERC20 AToken
+ * @title DiTo ERC777 Token
  *
- * @dev Implementation of the SkillWallet token for the DistributedTown project.
+ * @dev Implementation of the DiTo token for the DistributedTown project.
  * @author DistributedTown
  */
 contract DITOCredit is ERC777, Ownable {
@@ -17,16 +17,19 @@ contract DITOCredit is ERC777, Ownable {
     mapping(address => bool) public whitelist;
 
     modifier onlyInWhitelist() {
-        require(whitelist[msg.sender], "");
+        require(whitelist[msg.sender], "Transfer only in whitelist!");
         _;
     }
 
-    constructor(address[] memory defaultOperators)
-        public
-        ERC777("DiTo", "DITO", defaultOperators)
-    {
-        whitelist[msg.sender] = true;
-        _mint(msg.sender, 96000 * 1e18, "", "");
+    /**
+     * DiToCredits implements ERC777
+     * The default operator for all token holders is the community contract
+     * There will be no other operators allowed.
+     */
+    constructor(address communityTokenHolder, address[] memory _defaultOperators) public ERC777("DiTo", "DITO", _defaultOperators) {
+        require(_defaultOperators.length > 0, "No default operators passed!");
+        whitelist[communityTokenHolder] = true;
+        _mint(communityTokenHolder, 96000 * 1e18, "", "");
     }
 
     /**
@@ -45,54 +48,39 @@ contract DITOCredit is ERC777, Ownable {
      **/
     function removeFromWhitelist(address _communityMember) public onlyOwner {
         whitelist[_communityMember] = false;
-
         emit RemovedFromWhitelist(_communityMember);
     }
 
-    function transfer(address recipient, uint256 amount)
-        public
-        override
-        onlyInWhitelist
-        returns (bool)
-    {
-        require(whitelist[recipient], 'Recipient should be whitelisted');
-        return super.transfer(recipient, amount);
-    }
-
-    function approve(address spender, uint256 amount)
-        public
-        override
-        onlyInWhitelist
-        returns (bool)
-    {
-        require(whitelist[spender], 'Recipient should be whitelisted');
-        return super.approve(spender, amount);
-    }
-
-    function transferFrom(
+    /**
+     * @dev The operator (community.sol) sends tokens from one account to another (only if whitelisted)
+     * @param sender the address of the sender
+     * @param recipient the address of the recipient
+     * @param amount the amount of tokens
+     * @param data the transfer data
+     * @param operatorData the transfer operatorData
+     **/
+    function operatorSend(
         address sender,
         address recipient,
-        uint256 amount
-    ) public override onlyInWhitelist returns (bool) {
-        require(whitelist[recipient], 'Recipient should be whitelisted');
-        _send(sender, recipient, amount, "", "", false);
-        return true;
+        uint256 amount,
+        bytes calldata data,
+        bytes calldata operatorData
+    ) public override onlyOwner {
+        require(whitelist[recipient], "Recipient should be whitelisted");
+        super.operatorSend(sender, recipient, amount, data, operatorData);
     }
 
+    /**
+     * @dev Only the Community.sol can be an operator for this token.
+     **/
     function authorizeOperator(address operator) public virtual override {
         require(false, "Only Community.sol can be an operator.");
     }
 
+    /**
+     * @dev The operator can't be revoked. The only operator is the community contract.
+     **/
     function revokeOperator(address operator) public virtual override {
         require(false, "Community.sol cannot be removed from the operators.");
-    }
-
-    function send(
-        address recipient,
-        uint256 amount,
-        bytes memory data
-    ) public virtual override onlyInWhitelist {
-        require(whitelist[recipient], 'Recipient should be whitelisted');
-        _send(_msgSender(), recipient, amount, data, "", false);
     }
 }
