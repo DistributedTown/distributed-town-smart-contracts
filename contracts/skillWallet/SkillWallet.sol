@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./ISkillWallet.sol";
 import "../CommonTypes.sol";
+import "./ISWActionExecutor.sol";
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -42,22 +43,32 @@ contract SkillWallet is
 
     mapping(uint256 => string) public skillWalletToPubKey;
 
+    mapping(Types.Action => address) public actionToContract;
+
     Counters.Counter private _skillWalletCounter;
     address private oracle;
     bytes32 private jobId;
     uint256 private fee;
 
+    mapping(bytes32 => Types.SWValidationRequest)
+        private clReqIdToValidationRequest;
+
     constructor() public ERC721("SkillWallet", "SW") {
         setChainlinkToken(0x326C977E6efc84E512bB9C30f76E30c160eD06FB);
         oracle = 0xc8D925525CA8759812d0c299B90247917d4d4b7C;
-        jobId = "f4b6aa4bec634966ac35f0550937f7ba";
+        jobId = "31061086cb2749f7a3f99f2d5179caf7";
         fee = 0.1 * 10**18; // 0.1 LINK
+        // actionToContract[Types.Actions.Login] = address(this);
+        // actionToContract[Types.Actions.CreateGig] = address();
     }
 
     function validate(
         string calldata signature,
         uint256 tokenId,
-        uint256 action
+        uint256 action,
+        string[] memory stringParams,
+        uint[] memory intParams, 
+        address[] memory addressParams
     ) public {
         require(
             bytes(skillWalletToPubKey[tokenId]).length > 0,
@@ -94,15 +105,42 @@ contract SkillWallet is
                 )
             )
         );
+
+        address caller = ownerOf(tokenId);
         sendChainlinkRequestTo(oracle, req, fee);
+
+        clReqIdToValidationRequest[req.id] = Types.SWValidationRequest(
+            caller,
+            Types.Action(action),
+            Types.Params(stringParams, intParams, addressParams),
+            //TODO: put gigs Address
+            address(0)
+        );
     }
 
     function validationCallback(bytes32 _requestId, bool _isValid)
         public
-    recordChainlinkFulfillment(_requestId)
+        recordChainlinkFulfillment(_requestId)
     {
-        if (_isValid) emit ValidationPassed(0, 0, 0);
-        else emit ValidationFailed(0, 0, 0);
+        // add a require here so that only the oracle contract can
+        // call the fulfill alarm method
+        Types.SWValidationRequest memory req =
+            clReqIdToValidationRequest[_requestId];
+        if (_isValid) {
+            emit ValidationPassed(0, 0, 0);
+            ISWActionExecutor actionExecutor =
+                ISWActionExecutor(actionToContract[req.action]);
+
+            actionExecutor.execute(
+                req.action,
+                req.caller,
+                req.params.intParams,
+                req.params.stringParams,
+                req.params.addressParams
+            );
+        } else {
+            emit ValidationFailed(0, 0, 0);
+        }
     }
 
     function create(

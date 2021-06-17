@@ -22,4 +22,26 @@ library Types {
         uint8 posValue;
         uint256 categoryID;
     }
+
+    enum Action {
+        Login, 
+        CreateGig,
+        TakeGig,
+        SubmitGig,
+        CompleteGig
+    }
+
+    struct SWValidationRequest {
+        address caller;
+        Types.Action action;
+        Types.Params params;
+        address contractAddress;
+    }
+
+    struct Params {
+        string[] stringParams;
+        uint[] intParams;
+        address[] addressParams;
+    }
+
 }

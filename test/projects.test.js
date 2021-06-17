@@ -20,7 +20,7 @@ contract('Projects', function ([_, registryFunder, creator, member]) {
         AddressProvider.link(this.gigStatuses);
         this.addressProvder = await AddressProvider.new();
 
-        this.skillWallet = await SkillWallet.new('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876', { from: creator });
+        this.skillWallet = await SkillWallet.new({ from: creator });
         this.distirbutedTown = await DistributedTown.new('http://someurl.co', this.skillWallet.address, this.addressProvder.address, { from: creator });
         await this.distirbutedTown.deployGenesisCommunities(0, { from: creator });
         await this.distirbutedTown.deployGenesisCommunities(1, { from: creator });

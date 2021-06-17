@@ -1,6 +1,8 @@
-const SW = '0x37eabd1e1253dcD9dA3c15dd56881F931DbAA5Bf';
+const SW = '0xaF2223025F411f0774Bb2a46dF05F0F8Cb159B32';
 var ethers = require('ethers');
 var abi = require('./artifacts/contracts/skillWallet/SkillWallet.sol/SkillWallet.json').abi;
+var ditoabi = require('./artifacts/contracts/DistributedTown.sol/DistributedTown.json').abi;
+var communityAbi = require('./artifacts/contracts/community/Community.sol/Community.json').abi;
 
 function mnemonic() {
   return "close gesture fatal vacant time toy general horror payment visit case you";
@@ -8,6 +10,7 @@ function mnemonic() {
 
 const provider = new ethers.providers.JsonRpcProvider(
   'https://rpc-mumbai.maticvigil.com'
+  // 'https://kovan.infura.io/v3/779285194bd146b48538d269d1332f20'
 );
 
 // Wallet connected to a provider
@@ -25,14 +28,56 @@ const contract = new ethers.Contract(
   signer,
 );
 
+const ditoContract = new ethers.Contract(
+  '0xAC799Fe2E37F6E1702889AC058D938d0216d7a25',
+  ditoabi,
+  signer,
+);
 
+async function deployGenesis() {
+  // const t = await ditoContract.deployGenesisCommunities(0);
+  const t = await ditoContract.deployGenesisCommunities(1);
+  const tx1 = await ditoContract.deployGenesisCommunities(2);
+  console.log(t);
+}
+
+async function getCommunities() {
+  const coms = await ditoContract.getCommunities();
+  console.log(coms);
+}
+
+
+async function getDiToCreditAddr() {
+  const coms = await ditoContract.getCommunities();
+  const communityContract = new ethers.Contract(
+    coms[0],
+    communityAbi,
+    signer,
+  );
+  const a = await communityContract.ditoCreditsAddr();
+  console.log(a);
+}
+
+async function joinCommunity() {
+  const coms = await ditoContract.getCommunities();
+  const communityContract = new ethers.Contract(
+    coms[0],
+    communityAbi,
+    signer,
+  );
+  const url = 'https://hub.textile.io/ipfs/bafkreicezefuc6einewxdqhlpefelzjponwdqt4vmp2byosq5uwpn7hgoq';
+
+  const wei = ethers.utils.parseEther('2220').toString();
+  const joinedTx = await communityContract.joinNewMember(1, 1, 2, 2, 3, 3, url, wei);
+  console.log(joinedTx);
+}
 async function createSW() {
   let one_bn = ethers.BigNumber.from(1);
   let skill = [one_bn, one_bn]
   let skillSet = [skill, skill, skill];
   let tokenId = -1;
   const createTx = await contract.create(
-    '0x0243Dc6b9F3420B42b140f83a4068A2247b41B61',
+    '0x2CEF62C91Dd92FC35f008D1d6Ed08EADF64306bc',
     skillSet,
     'https://some.url'
   );
@@ -73,18 +118,12 @@ async function activateSW(tokenId) {
 }
 
 async function validateSW(tokenId) {
-  // let overrides = {
-  //   // The maximum units of gas for the transaction to use
-  //   gasLimit: 230000,
-  // };
-
   const pubKey = await contract.skillWalletToPubKey(0);
   console.log(pubKey);
   const createTx = await contract.validate(
     '9266a4aa1fe3bae8eaec10aab954ba560efdd976ca850b01e956b586121dbfbf275f2bde2071071fa08ed4d7b10626510300f1dc752c4924e85743a463b900761b',
     tokenId,
     1
-    // overrides
   );
 
   console.log(createTx);
@@ -104,12 +143,13 @@ async function validateSW(tokenId) {
 }
 
 async function test() {
-  const tokenId = await createSW();
-  await activateSW(tokenId);
+  // const tokenId = await createSW();
+  // await activateSW(tokenId);
 
-  // const tokenId = 0;
-  await validateSW(tokenId);
-
+  // // const tokenId = 0;
+  // await validateSW(tokenId);
+//  await deployGenesis();
+  await getDiToCreditAddr();
 }
 
 test();

@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "./GigStatuses.sol";
+import "../skillWallet/ISWActionExecutor.sol";
 
 struct Gig {
     address creator;
@@ -12,7 +13,7 @@ struct Gig {
     GigStatuses.GigStatus status;
 }
 
-interface IGigs is IERC721 {
+interface IGigs is IERC721, ISWActionExecutor {
     event GigCreated(address _creator, uint256 _gigId);
     event GigCompleted(uint256 _gigId);
     event GigTaken(uint256 _gigId);
