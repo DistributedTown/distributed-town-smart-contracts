@@ -6,7 +6,7 @@ const { deploy, tenderlyVerify } = require("./utils")
 const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
-    const skillWalletAddress = "0xae84b0329433a274Ae6712F5852D28B444Bb784b";
+    const skillWalletAddress = "0xfD516cEa651aD1ac3fa330a459e47865C947f851";
 
     console.log("\n\n 📡 Deploying...\n");
 

@@ -11,6 +11,7 @@ interface ISkillWallet is IERC721 {
     event SkillWalletCreated(address indexed skillWalletOwner, address indexed community, uint256 indexed skillWalletId, Types.SkillSet skillSet);
 
     event SkillWalletActivated(uint256 indexed skillWalletId);
+    event PubKeyAddedToSkillWallet(uint256 indexed skillWalletId);
 
     event SkillSetUpdated(uint256 indexed skillWalletId, Types.SkillSet newSkillSet);
 
@@ -24,7 +25,9 @@ interface ISkillWallet is IERC721 {
 
     function updateSkillSet(uint256 skillWalletId, Types.SkillSet memory newSkillSet) external;
 
-    function activateSkillWallet(uint256 skillWalletId, string calldata pubKey) external;
+    function activateSkillWallet(uint256 skillWalletId) external;
+    
+    function addPubKeyToSkillWallet(uint256 skillWalletId, string calldata pubKey) external;
 
     function changeCommunity(uint256 skillWalletId) external;
 

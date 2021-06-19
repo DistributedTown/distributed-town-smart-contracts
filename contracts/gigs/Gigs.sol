@@ -10,6 +10,7 @@ import "./IGigs.sol";
 import "./GigStatuses.sol";
 import "../community/Community.sol";
 import "../CommonTypes.sol";
+import "../skillWallet/ISWActionExecutor.sol";
 
 
 contract Gigs is IGigs, IERC721Metadata, ERC721 {
@@ -33,6 +34,7 @@ contract Gigs is IGigs, IERC721Metadata, ERC721 {
         address[] memory addressParams
     ) public override {
         // Called only by SW
+        require(msg.sender == community.getSkillWalletAddress());
         if (action == Types.Action.CreateGig) {
             createGig(
                 caller,

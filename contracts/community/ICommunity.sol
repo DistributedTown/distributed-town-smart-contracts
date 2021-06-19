@@ -57,4 +57,5 @@ interface ICommunity {
     function balanceOf(address member) external view returns (uint256);
 
     function transferCredits(address to, uint256 amount) external;
+    function getSkillWalletAddress() external view returns (address);
 }

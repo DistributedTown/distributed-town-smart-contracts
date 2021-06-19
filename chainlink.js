@@ -1,4 +1,4 @@
-const SW = '0xaF2223025F411f0774Bb2a46dF05F0F8Cb159B32';
+const SW = '0xfD516cEa651aD1ac3fa330a459e47865C947f851';
 var ethers = require('ethers');
 var abi = require('./artifacts/contracts/skillWallet/SkillWallet.sol/SkillWallet.json').abi;
 var ditoabi = require('./artifacts/contracts/DistributedTown.sol/DistributedTown.json').abi;
@@ -29,15 +29,19 @@ const contract = new ethers.Contract(
 );
 
 const ditoContract = new ethers.Contract(
-  '0xAC799Fe2E37F6E1702889AC058D938d0216d7a25',
+  '0x16d8869471Ff4e0ffd4ad42755132c92eBC291Be',
   ditoabi,
   signer,
 );
 
 async function deployGenesis() {
-  // const t = await ditoContract.deployGenesisCommunities(0);
-  const t = await ditoContract.deployGenesisCommunities(1);
-  const tx1 = await ditoContract.deployGenesisCommunities(2);
+    let overrides = {
+    // The maximum units of gas for the transaction to use
+    gasLimit: 230000,
+  };
+  const t = await ditoContract.deployGenesisCommunities(0);
+  // const t = await ditoContract.deployGenesisCommunities(1);
+  // const tx1 = await ditoContract.deployGenesisCommunities(2);
   console.log(t);
 }
 
@@ -98,8 +102,8 @@ async function createSW() {
 }
 
 
-async function activateSW(tokenId) {
-  const createTx = await contract.activateSkillWallet(
+async function addPubKeyToSkillWallet(tokenId) {
+  const createTx = await contract.addPubKeyToSkillWallet(
     tokenId,
     '7e61b836b79ed463994e6a9c6e9a92bdc4418ddfde88c9ec8adca3ea8d23ec4a'
   );
@@ -108,7 +112,7 @@ async function activateSW(tokenId) {
   const registerSkillWalletTransactionResult = await createTx.wait();
   const { events } = registerSkillWalletTransactionResult;
   const registeredEvent = events.find(
-    e => e.event === 'SkillWalletActivated',
+    e => e.event === 'PubKeyAddedToSkillWallet',
   );
   if (!registeredEvent)
     throw Error('Something went wrong!');
@@ -123,7 +127,10 @@ async function validateSW(tokenId) {
   const createTx = await contract.validate(
     '9266a4aa1fe3bae8eaec10aab954ba560efdd976ca850b01e956b586121dbfbf275f2bde2071071fa08ed4d7b10626510300f1dc752c4924e85743a463b900761b',
     tokenId,
-    1
+    0,
+    [],
+    [],
+    []
   );
 
   console.log(createTx);
@@ -142,14 +149,35 @@ async function validateSW(tokenId) {
   };
 }
 
-async function test() {
-  // const tokenId = await createSW();
-  // await activateSW(tokenId);
 
-  // // const tokenId = 0;
-  // await validateSW(tokenId);
-//  await deployGenesis();
-  await getDiToCreditAddr();
+async function isSkillWalletActivated(tokenId) {
+  const isActivated = await contract.isSkillWalletActivated(tokenId);
+  console.log(isActivated)
+}
+
+
+async function getSkillWalletIdByOwner(tokenId) {
+  const isActivated = await contract.getSkillWalletIdByOwner(tokenId);
+  console.log(isActivated)
+}
+
+async function ownerOf(tokenId) {
+  const isActivated = await contract.ownerOf(tokenId);
+  console.log(isActivated)
+}
+
+async function test() {
+  // await deployGenesis();
+
+  // const tokenId = await createSW();
+  // await addPubKeyToSkillWallet(tokenId);
+
+  const tokenId = 2;
+  // await validateSW(tsokenId);
+  // await getDiToCreditAddr();
+  await isSkillWalletActivated(tokenId);
+  await getSkillWalletIdByOwner('0x2CEF62C91Dd92FC35f008D1d6Ed08EADF64306bc');
+  await ownerOf(tokenId);
 }
 
 test();

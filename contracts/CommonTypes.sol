@@ -24,6 +24,7 @@ library Types {
     }
 
     enum Action {
+        Activate,
         Login, 
         CreateGig,
         TakeGig,
@@ -35,7 +36,6 @@ library Types {
         address caller;
         Types.Action action;
         Types.Params params;
-        address contractAddress;
     }
 
     struct Params {

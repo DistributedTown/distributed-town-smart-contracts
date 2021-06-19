@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./ISkillWallet.sol";
 import "../CommonTypes.sol";
 import "./ISWActionExecutor.sol";
+import "../community/Community.sol";
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -43,13 +44,13 @@ contract SkillWallet is
 
     mapping(uint256 => string) public skillWalletToPubKey;
 
-    mapping(Types.Action => address) public actionToContract;
 
     Counters.Counter private _skillWalletCounter;
     address private oracle;
     bytes32 private jobId;
     uint256 private fee;
 
+    event ValidationRequestIdSent(bytes32 requestId, address caller, uint256 tokenId);
     mapping(bytes32 => Types.SWValidationRequest)
         private clReqIdToValidationRequest;
 
@@ -58,8 +59,25 @@ contract SkillWallet is
         oracle = 0xc8D925525CA8759812d0c299B90247917d4d4b7C;
         jobId = "31061086cb2749f7a3f99f2d5179caf7";
         fee = 0.1 * 10**18; // 0.1 LINK
-        // actionToContract[Types.Actions.Login] = address(this);
-        // actionToContract[Types.Actions.CreateGig] = address();
+    }
+
+    function activateSkillWallet(uint256 skillWalletId) external override {
+        require(msg.sender == address(this));
+        require(
+            skillWalletId < _skillWalletCounter.current(),
+            "SkillWallet: skillWalletId out of range."
+        );
+        require(
+            _activeCommunities[skillWalletId] != address(0),
+            "SkillWallet: The SkillWallet is not in any community, invalid SkillWallet."
+        );
+        require(
+            _activatedSkillWallets[skillWalletId] == false,
+            "SkillWallet: Skill wallet already activated"
+        );
+        _activatedSkillWallets[skillWalletId] = true;
+
+        emit SkillWalletActivated(skillWalletId);
     }
 
     function validate(
@@ -67,12 +85,12 @@ contract SkillWallet is
         uint256 tokenId,
         uint256 action,
         string[] memory stringParams,
-        uint[] memory intParams, 
+        uint256[] memory intParams,
         address[] memory addressParams
     ) public {
         require(
             bytes(skillWalletToPubKey[tokenId]).length > 0,
-            "SkillWallet should be activated first!"
+            "PubKey should be assigned to the skill walletID first!"
         );
 
         Chainlink.Request memory req =
@@ -105,17 +123,16 @@ contract SkillWallet is
                 )
             )
         );
-
         address caller = ownerOf(tokenId);
-        sendChainlinkRequestTo(oracle, req, fee);
+        bytes32 reqId = sendChainlinkRequestTo(oracle, req, fee);
 
-        clReqIdToValidationRequest[req.id] = Types.SWValidationRequest(
+        clReqIdToValidationRequest[reqId] = Types.SWValidationRequest(
             caller,
             Types.Action(action),
-            Types.Params(stringParams, intParams, addressParams),
-            //TODO: put gigs Address
-            address(0)
+            Types.Params(stringParams, intParams, addressParams)
         );
+
+        emit ValidationRequestIdSent(reqId, caller, tokenId);
     }
 
     function validationCallback(bytes32 _requestId, bool _isValid)
@@ -128,16 +145,23 @@ contract SkillWallet is
             clReqIdToValidationRequest[_requestId];
         if (_isValid) {
             emit ValidationPassed(0, 0, 0);
-            ISWActionExecutor actionExecutor =
-                ISWActionExecutor(actionToContract[req.action]);
 
-            actionExecutor.execute(
-                req.action,
-                req.caller,
-                req.params.intParams,
-                req.params.stringParams,
-                req.params.addressParams
-            );
+            if(req.action == Types.Action.Login) {
+                return;
+            } else if (req.action == Types.Action.Activate) {
+                this.activateSkillWallet(_skillWalletsByOwner[req.caller]);
+            } else {
+            ISWActionExecutor actionExecutor =
+                ISWActionExecutor(getContractAddressPerAction(req.action, req.caller));
+
+                actionExecutor.execute(
+                    req.action,
+                    req.caller,
+                    req.params.intParams,
+                    req.params.stringParams,
+                    req.params.addressParams
+                );
+            }
         } else {
             emit ValidationFailed(0, 0, 0);
         }
@@ -190,11 +214,10 @@ contract SkillWallet is
         emit SkillSetUpdated(skillWalletId, newSkillSet);
     }
 
-    function activateSkillWallet(uint256 skillWalletId, string calldata pubKey)
-        external
-        override
-        onlyOwner
-    {
+    function addPubKeyToSkillWallet(
+        uint256 skillWalletId,
+        string calldata pubKey
+    ) external override onlyOwner {
         require(
             skillWalletId < _skillWalletCounter.current(),
             "SkillWallet: skillWalletId out of range."
@@ -208,9 +231,8 @@ contract SkillWallet is
             "SkillWallet: Skill wallet already activated"
         );
         skillWalletToPubKey[skillWalletId] = pubKey;
-        _activatedSkillWallets[skillWalletId] = true;
 
-        emit SkillWalletActivated(skillWalletId);
+        emit PubKeyAddedToSkillWallet(skillWalletId);
     }
 
     function changeCommunity(uint256 skillWalletId) external override {
@@ -349,5 +371,23 @@ contract SkillWallet is
         );
 
         return _skillSets[skillWalletId];
+    }
+
+    function getContractAddressPerAction(
+        Types.Action action,
+        address caller
+    ) private view returns (address) {
+        uint skillWalletId = _skillWalletsByOwner[caller];
+        if (
+            action == Types.Action.CreateGig ||
+            action == Types.Action.TakeGig ||
+            action == Types.Action.SubmitGig ||
+            action == Types.Action.CompleteGig
+        ) {
+            address community = _activeCommunities[skillWalletId];
+            address gigAddress = Community(community).gigsAddr();
+            return gigAddress;
+        }
+        return address(0);
     }
 }
