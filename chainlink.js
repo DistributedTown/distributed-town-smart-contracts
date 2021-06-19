@@ -81,7 +81,7 @@ async function createSW() {
   let skillSet = [skill, skill, skill];
   let tokenId = -1;
   const createTx = await contract.create(
-    '0x2CEF62C91Dd92FC35f008D1d6Ed08EADF64306bc',
+    '0xcBefc0678aA07aC20Ed35e33EF3F86558F53FA23',
     skillSet,
     'https://some.url'
   );
@@ -105,7 +105,7 @@ async function createSW() {
 async function addPubKeyToSkillWallet(tokenId) {
   const createTx = await contract.addPubKeyToSkillWallet(
     tokenId,
-    '7e61b836b79ed463994e6a9c6e9a92bdc4418ddfde88c9ec8adca3ea8d23ec4a'
+    '63d8084cc9f024a25b89c8bf528a4697ef8a339533a363c1f5c3842fcc6fbb1b'
   );
 
   // Wait for transaction to finish
@@ -125,7 +125,7 @@ async function validateSW(tokenId) {
   const pubKey = await contract.skillWalletToPubKey(0);
   console.log(pubKey);
   const createTx = await contract.validate(
-    '9266a4aa1fe3bae8eaec10aab954ba560efdd976ca850b01e956b586121dbfbf275f2bde2071071fa08ed4d7b10626510300f1dc752c4924e85743a463b900761b',
+    '71d13aec168c69493df39962b7c48dd970e2dfc212936c1fde333d1ba99dcb104c08b24e8a1b38ba36b576fdd8054bcb68536a764fd0a056b0ed8736793a3fba1b',
     tokenId,
     0,
     [],
@@ -172,11 +172,11 @@ async function test() {
   // const tokenId = await createSW();
   // await addPubKeyToSkillWallet(tokenId);
 
-  const tokenId = 2;
-  // await validateSW(tsokenId);
+  const tokenId = 6;
+  // await validateSW(tokenId);
   // await getDiToCreditAddr();
   await isSkillWalletActivated(tokenId);
-  await getSkillWalletIdByOwner('0x2CEF62C91Dd92FC35f008D1d6Ed08EADF64306bc');
+  await getSkillWalletIdByOwner('0xcBefc0678aA07aC20Ed35e33EF3F86558F53FA23');
   await ownerOf(tokenId);
 }
 
