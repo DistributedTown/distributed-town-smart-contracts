@@ -2,6 +2,8 @@
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
+import "skill-wallet/contracts/main/ISkillWallet.sol";
+
 import "./ICommunity.sol";
 import "./Treasury.sol";
 import "./TreasuryFactory.sol";
@@ -9,10 +11,9 @@ import "./DITOCredit.sol";
 import "./DITOCreditFactory.sol";
 import "../gigs/Gigs.sol";
 import "../gigs/GigsFactory.sol";
-import "../CommonTypes.sol";
+// import "../CommonTypes.sol";
 import "../DistributedTown.sol";
 import "../projects/Projects.sol";
-import "../skillWallet/ISkillWallet.sol";
 import "../AddressProvider.sol";
 import "./DiToCreditCommunityHolder.sol";
 

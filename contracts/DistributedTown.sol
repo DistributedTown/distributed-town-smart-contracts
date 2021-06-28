@@ -5,10 +5,10 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "skill-wallet/contracts/main/ISkillWallet.sol";
 
 import "./projects/Projects.sol";
 import "./community/Community.sol";
-import "./skillWallet/ISkillWallet.sol";
 
 /**
  * @title DistributedTown Community
@@ -52,7 +52,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         string calldata communityMetadata,
         uint256 template
     ) public {
-        ISkillWallet skillWallet = ISkillWallet(skillWalletAddress);
+        SkillWallet skillWallet = SkillWallet(skillWalletAddress);
         bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
         require(
             isRegistered,
