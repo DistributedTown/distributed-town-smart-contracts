@@ -14,13 +14,9 @@ Terminal 1#:
 
 Terminal #2:
 
-1. Change the value of the `skillWalletAddress` variable in `scripts/deployCommunityRegistry.js` (line 9)
+1. Change the value of the `skillWalletAddress` variable in `scripts/deployDistributedTown.js`
+
 2. Run `yarn deployCommunityRegistry`
-
-3. Change the value of the `communityRegistryAddress` variable in `scripts/dcreateCommunity.js` (line 7)
-4. Run `yarn createCommunity`
-
-5. Run `yarn deployGigsRegistry`
 
 ## Matic testnet deployment
 
