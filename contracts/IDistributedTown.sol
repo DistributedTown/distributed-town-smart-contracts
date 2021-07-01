@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
  * @author DistributedTown
  */
 
-interface DistributedTown is ERC1155, ERC1155Holder {
+interface IDistributedTown is ERC1155, ERC1155Holder {
     event CommunityCreated(
         address communityContract,
         uint256 communityId,
