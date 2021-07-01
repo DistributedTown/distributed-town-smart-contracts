@@ -4,11 +4,11 @@ const truffleAssert = require('truffle-assertions')
 
 const MockOracle = artifacts.require('skill-wallet/contracts/mocks/MockOracle')
 const LinkToken = artifacts.require('skill-wallet/contracts/mocks/LinkToken')
+const SkillWallet = artifacts.require('skill-wallet/contracts/main/SkillWallet')
 
 const GigStatuses = artifacts.require('GigStatuses')
 const DistributedTown = artifacts.require('DistributedTown')
 const Community = artifacts.require('Community')
-const SkillWallet = artifacts.require('skill-wallet/contracts/main/SkillWallet')
 const AddressProvider = artifacts.require('AddressProvider')
 const Projects = artifacts.require('Projects')
 const metadataUrl =

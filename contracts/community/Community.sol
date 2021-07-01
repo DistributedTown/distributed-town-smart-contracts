@@ -229,4 +229,8 @@ contract Community is ICommunity {
             Projects(DistributedTown(distributedTownAddr).projectsAddress());
         return projects.getProjectTreasuryAddress(projectId);
     }
+
+    function getSkillWalletAddress() public override returns(address) {
+        return DistributedTown(distributedTownAddr).skillWalletAddress();
+    }
 }

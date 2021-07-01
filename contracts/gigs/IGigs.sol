@@ -35,7 +35,4 @@ interface IGigs is IERC721 {
     function submitGig(uint256 _gigId, address submitter) external;
 
     function completeGig(uint256 _gigId, address completor) external;
-
-    // callback of SW validate should call this.
-    function markAsValid(uint256 _gigId) external;
 }

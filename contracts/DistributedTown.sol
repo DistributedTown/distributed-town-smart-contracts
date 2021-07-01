@@ -2,13 +2,12 @@
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "skill-wallet/contracts/main/ISkillWallet.sol";
 
 import "./projects/Projects.sol";
 import "./community/Community.sol";
+import "./IDistributedTown.sol";
 
 /**
  * @title DistributedTown Community
@@ -17,7 +16,7 @@ import "./community/Community.sol";
  * @author DistributedTown
  */
 
-contract DistributedTown is ERC1155, ERC1155Holder {
+contract DistributedTown is IDistributedTown {
     event CommunityCreated(
         address communityContract,
         uint256 communityId,
@@ -30,6 +29,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
 
     mapping(address => uint256) public communityAddressToTokenID;
     mapping(uint256 => uint256) public communityToTemplate;
+    mapping(address => address) public ownerToCommunity;
     address[] public communities;
     address public projectsAddress;
     address public skillWalletAddress;
@@ -49,10 +49,10 @@ contract DistributedTown is ERC1155, ERC1155Holder {
     }
 
     function createCommunity(
-        string calldata communityMetadata,
+        string memory communityMetadata,
         uint256 template
-    ) public {
-        SkillWallet skillWallet = SkillWallet(skillWalletAddress);
+    ) public override {
+        ISkillWallet skillWallet = ISkillWallet(skillWalletAddress);
         bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
         require(
             isRegistered,
@@ -78,6 +78,7 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
         communities.push(comAddr);
+        ownerToCommunity[msg.sender] = comAddr;
 
         //TODO: add the creator as a community member
         emit CommunityCreated(
@@ -88,11 +89,15 @@ contract DistributedTown is ERC1155, ERC1155Holder {
         );
     }
 
-    function getCommunities() public view returns (address[] memory) {
+    function getCommunities() public view override returns (address[] memory) {
         return communities;
     }
 
-    function deployGenesisCommunities(uint256 template) public {
+    function getCommunityByOwner(address owner) public override view returns(address) {
+        return ownerToCommunity[owner];
+    }
+
+    function deployGenesisCommunities(uint256 template) public override {
         require(
             communityTokenIds.current() < 3,
             "asdasdasd"
