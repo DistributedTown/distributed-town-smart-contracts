@@ -1,17 +1,15 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 /**
- * @title DistributedTown Community
+ * @title IDistributedTown
  *
- * @dev Implementation of the Community concept in the scope of the DistributedTown project
+ * @dev DistributedTown Interface
  * @author DistributedTown
  */
 
-interface IDistributedTown is ERC1155, ERC1155Holder {
+interface IDistributedTown {
     event CommunityCreated(
         address communityContract,
         uint256 communityId,
@@ -20,12 +18,16 @@ interface IDistributedTown is ERC1155, ERC1155Holder {
     );
 
     function createCommunity(
-        string memory communityMetadata,
-        uint256 template
+        string calldata communityMetadata,
+        uint256 template,
+        uint totalMembersAllowed
     ) external;
 
     function getCommunities() external view returns (address[] memory);
 
     function deployGenesisCommunities(uint256 template) external;
+
     function getCommunityByOwner(address owner) external view returns(address);
+
+    function setPartnersRegistryAddress(address partnersRegistry) public;
 }

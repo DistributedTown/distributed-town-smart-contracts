@@ -1,6 +1,6 @@
 {
   "name": "distributed-town-smart-contracts",
-  "version": "0.0.1-alpha",
+  "version": "0.0.2-beta",
   "main": "index.js",
   "license": "MIT",
   "files": [

@@ -2,6 +2,11 @@
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
+
+import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "skill-wallet/contracts/main/ISkillWallet.sol";
 
@@ -16,32 +21,34 @@ import "./IDistributedTown.sol";
  * @author DistributedTown
  */
 
-contract DistributedTown is IDistributedTown {
+contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
     event CommunityCreated(
         address communityContract,
-        uint256 communityId,
-        uint256 template,
+        uint communityId,
+        uint template,
         address indexed creator
     );
     using Counters for Counters.Counter;
 
     Counters.Counter private communityTokenIds;
 
-    mapping(address => uint256) public communityAddressToTokenID;
-    mapping(uint256 => uint256) public communityToTemplate;
+    mapping(address => uint) public communityAddressToTokenID;
+    mapping(uint => uint) public communityToTemplate;
     mapping(address => address) public ownerToCommunity;
     address[] public communities;
     address public projectsAddress;
     address public skillWalletAddress;
     address public communityFactoryAddress;
     address addressProvider;
+    address partnersRegistryAddress;
 
     // TODO Add JSON Schema base URL
-    constructor(string memory _url, address _skillWalletAddress, address _addrProvider)
+    constructor(string memory _url, address _skillWalletAddress, address _addrProvider, address _partnersRegistryAddress)
         public
         ERC1155(_url)
     {
         // initialize pos values of the 3 templates;
+        partnersRegistryAddress = _partnersRegistryAddress;
         skillWalletAddress = _skillWalletAddress;
         Projects projects = new Projects(_skillWalletAddress);
         projectsAddress = address(projects);
@@ -50,31 +57,34 @@ contract DistributedTown is IDistributedTown {
 
     function createCommunity(
         string memory communityMetadata,
-        uint256 template
+        uint template,
+        uint totalMembersAllowed
     ) public override {
-        ISkillWallet skillWallet = ISkillWallet(skillWalletAddress);
-        bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
-        require(
-            isRegistered,
-            "SW not registered."
-        );
+        uint membersCount = 24;
+        if(msg.sender != partnersRegistryAddress) {
+            ISkillWallet skillWallet = ISkillWallet(skillWalletAddress);
+            bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
+            require(
+                isRegistered,
+                "SW not registered."
+            );
 
-        uint256 skillWalletId = skillWallet.getSkillWalletIdByOwner(msg.sender);
-        bool isActive = skillWallet.isSkillWalletActivated(skillWalletId);
-        require(
-            isActive,
-            "SW not active."
-        );
+            uint skillWalletId = skillWallet.getSkillWalletIdByOwner(msg.sender);
+            bool isActive = skillWallet.isSkillWalletActivated(skillWalletId);
+            require(
+                isActive,
+                "SW not active."
+            );
+            membersCount = totalMembersAllowed;
+        }
 
         // TODO: add check for validated skills;
         _mint(address(this), template, 1, "");
 
         communityTokenIds.increment();
-        uint256 newItemId = communityTokenIds.current();
+        uint newItemId = communityTokenIds.current();
 
-        // check if skill wallet is active
-        // TODO: add skill wallet address
-        address comAddr = address(new Community(communityMetadata, addressProvider));
+        address comAddr = address(new Community(communityMetadata, addressProvider, membersCount));
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
         communities.push(comAddr);
@@ -89,6 +99,10 @@ contract DistributedTown is IDistributedTown {
         );
     }
 
+    function setPartnersRegistryAddress(address _partnersRegistryAddress) public override onlyOwner {
+        partnersRegistryAddress = _partnersRegistryAddress;
+    }
+
     function getCommunities() public view override returns (address[] memory) {
         return communities;
     }
@@ -97,7 +111,7 @@ contract DistributedTown is IDistributedTown {
         return ownerToCommunity[owner];
     }
 
-    function deployGenesisCommunities(uint256 template) public override {
+    function deployGenesisCommunities(uint template) public override {
         require(
             communityTokenIds.current() < 3,
             "asdasdasd"
@@ -109,9 +123,9 @@ contract DistributedTown is IDistributedTown {
                 "https://hub.textile.io/ipfs/bafkreid7jtzhuedeggn5welup7iyxchpqodbyam3yfnt4ey4xwnusr3vbe",
                 "https://hub.textile.io/ipfs/bafkreibglk3i7c24b2zprsd3jlkzfhxti6rubv3tkif6hu36lz42uwrfki"
             ];
-        uint256 newItemId = communityTokenIds.current();
+        uint newItemId = communityTokenIds.current();
         _mint(address(this), template, 1, "");
-        Community community = new Community(metadata[template], addressProvider);
+        Community community = new Community(metadata[template], addressProvider, 24);
         address comAddr = address(community);
 
         communityAddressToTokenID[comAddr] = newItemId;
