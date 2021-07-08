@@ -7,7 +7,7 @@ const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
     // const skillWalletAddress = "0x301214E981aAE83163A70266832748fB2D030156";
-    const skillWalletAddress = '0x698f51C10fa47bE854E974C2b526D5288e0Bd5A7';
+    const skillWalletAddress = '0x06711982af00e0a73be4Ca55A03Ab34f1227FbA1';
     console.log("\n\n 📡 Deploying...\n");
     const gigStatuses = await deploy('GigStatuses');
     await gigStatuses.deployed();
