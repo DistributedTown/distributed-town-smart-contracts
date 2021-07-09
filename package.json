@@ -1,8 +1,24 @@
 {
-  "name": "distributed-town-contracts",
-  "version": "1.0.0",
+  "name": "distributed-town-smart-contracts",
+  "version": "0.0.2-beta",
   "main": "index.js",
   "license": "MIT",
+  "files": [
+    "/contracts/*/*.sol",
+    "/contracts/*.sol",
+    "/artifacts/contracts/**/*.json"
+  ],
+  "keywords": [
+    "solidity",
+    "ethereum",
+    "smart",
+    "contracts",
+    "security",
+    "identity",
+    "dao"
+  ],
+  "author": "DistributedTown Team <team@distributed.town>",
+  "homepage": "https://distributed.town/",
   "devDependencies": {
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@nomiclabs/hardhat-truffle5": "2.0.0",

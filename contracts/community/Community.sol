@@ -39,9 +39,10 @@ contract Community is ICommunity {
     address public gigsAddr;
     address public ditoCreditsHolder;
     uint256[] projectIds;
+    uint totalMembersAllowed;
 
     // add JSON Schema base URL
-    constructor(string memory _url, address _addrProvider) public {
+    constructor(string memory _url, address _addrProvider, uint _totalMembersAllowed) public {
         metadataUri = _url;
         distributedTownAddr = msg.sender;
 
@@ -54,6 +55,7 @@ contract Community is ICommunity {
             ditoCreditsAddr
         );
         gigsAddr = GigsFactory(provider.gigsFactory()).deploy();
+        totalMembersAllowed = _totalMembersAllowed;
         joinNewMember(0, 0, 0, 0, 0, 0, _url, 2000 * 1e18);
     }
 
@@ -69,8 +71,8 @@ contract Community is ICommunity {
         uint256 credits
     ) public override {
         require(
-            activeMembersCount <= 24,
-            "There are already 24 members, sorry!"
+            activeMembersCount <= totalMembersAllowed,
+            "No free spots left!"
         );
         require(!isMember[msg.sender], "Already a member");
 
@@ -111,8 +113,8 @@ contract Community is ICommunity {
 
     function join(uint256 skillWalletTokenId, uint256 credits) public override {
         require(
-            activeMembersCount <= 24,
-            "There are already 24 members, sorry!"
+            activeMembersCount <= totalMembersAllowed,
+            "No free spots left!"
         );
 
         ISkillWallet skillWallet =
@@ -130,7 +132,7 @@ contract Community is ICommunity {
 
         isMember[skillWalletAddress] = true;
         skillWalletIds[activeMembersCount] = skillWalletTokenId;
-        skillWalletIds[1] = 123;
+        // skillWalletIds[1] = 123;
         activeMembersCount++;
 
         DITOCredit(ditoCreditsAddr).addToWhitelist(skillWalletAddress);
@@ -228,5 +230,9 @@ contract Community is ICommunity {
         Projects projects =
             Projects(DistributedTown(distributedTownAddr).projectsAddress());
         return projects.getProjectTreasuryAddress(projectId);
+    }
+
+    function getSkillWalletAddress() public override returns(address) {
+        return DistributedTown(distributedTownAddr).skillWalletAddress();
     }
 }
