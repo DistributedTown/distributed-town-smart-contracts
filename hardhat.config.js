@@ -23,7 +23,7 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 //
 // Select the network you want to deploy to here:
 //
-const defaultNetwork = "maticTestnet";
+const defaultNetwork = "kovan";
 
 function mnemonic() {
   try {
@@ -69,7 +69,9 @@ module.exports = {
     maticTestnet: {
       url: 'https://rpc-mumbai.maticvigil.com/',
       gasPrice: 1000000000,
-      accounts: ['']
+      accounts: {
+        mnemonic: mnemonic(),
+      }
     }
   },
   solidity: {

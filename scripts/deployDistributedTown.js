@@ -7,7 +7,7 @@ const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
     // const skillWalletAddress = "0x301214E981aAE83163A70266832748fB2D030156";
-    const skillWalletAddress = '0x06711982af00e0a73be4Ca55A03Ab34f1227FbA1';
+    const skillWalletAddress = '0x7426575fa17c319ca85591a1211E5574f49694aB';
     console.log("\n\n 📡 Deploying...\n");
     const gigStatuses = await deploy('GigStatuses');
     await gigStatuses.deployed();
@@ -19,10 +19,9 @@ const main = async () => {
     await addressProvider.deployed();
     const distributedTown = await deploy("DistributedTown", ['http://someurl.io', skillWalletAddress, addressProvider.address]);
     await distributedTown.deployed();
-    const a = await distributedTown.deployGenesisCommunities(0, {
-        // The maximum units of gas for the transaction to use
-        gasLimit: 2300000
-    });
+    const a = await distributedTown.deployGenesisCommunities(0);
+    await distributedTown.deployGenesisCommunities(1);
+    await distributedTown.deployGenesisCommunities(2);
     console.log(a);
     // await distributedTown.deployGenesisCommunities(1);
     // await distributedTown.deployGenesisCommunities(2);

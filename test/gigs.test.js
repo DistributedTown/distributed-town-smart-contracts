@@ -14,7 +14,11 @@ const Gigs = artifacts.require('Gigs')
 const AddressProvider = artifacts.require('AddressProvider')
 const metadataUrl =
   'https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice'
-var BN = web3.utils.BN
+var BN = web3.utils.BN;
+
+let skillWallet;
+let mockOracle;
+let gigs;
 
 contract('Gigs', function ([
   _,
@@ -23,45 +27,172 @@ contract('Gigs', function ([
   firstMember,
   secondMember,
   thirdMember,
-  notAMember,
+  notAMember
 ]) {
-  async function createGigFunc(user, ditoCredits) {
-    let createGigValidationTx = await this.skillWallet.validate(
+
+  const Action = {
+    Activate: 0,
+    Login: 1,
+    CreateGig: 2,
+    TakeGig: 3,
+    SubmitGig: 4,
+    CompleteGig: 5
+  }
+
+  const GigStatus = {
+    Open: 0,
+    Taken: 1,
+    Submitted: 2,
+    Completed: 3
+  }
+
+  async function createGigSuccessfullyFunc(swId, ditoCredits) {
+    let createGigValidationTx = await skillWallet.validate(
       'signature',
-      user,
-      2,
+      swId,
+      Action.CreateGig,
       ['http://...'],
-      [ditoCredits],
+      [web3.utils.toWei(new BN(ditoCredits))],
       [],
     )
+
     let validationRequestIdSentEventEmitted =
       createGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
     assert.isTrue(validationRequestIdSentEventEmitted)
 
-    const requestId = validationTx.logs[0].args[0]
-    const fulfilTx = await this.mockOracle.fulfillOracleRequest(requestId, true)
+    const requestId = createGigValidationTx.logs[0].args[0]
+    const fulfilTx = await mockOracle.fulfillOracleRequest(
+      requestId,
+      true,
+    )
+    const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
+
+    assert.isTrue(fulfilTxEventEmitted)
+
+    const gigId = (await gigs.gigsCount()) - 1
+    const gig = await gigs.gigs(gigId)
+
+    assert.equal(gig.creator, firstMember)
+    assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
+    assert.equal(gig.status, GigStatus.Open)
+    assert.equal(
+      gig.ditoCredits.toString(),
+      web3.utils.toWei(new BN(ditoCredits)).toString(),
+    )
+  }
+  async function createGigFunc(swId, ditoCredits) {
+    let createGigValidationTx = await skillWallet.validate(
+      'signature',
+      swId,
+      Action.CreateGig,
+      ['http://...'],
+      [web3.utils.toWei(new BN(ditoCredits))],
+      [],
+    )
+
+    let validationRequestIdSentEventEmitted =
+      createGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
+    assert.isTrue(validationRequestIdSentEventEmitted)
+
+    const requestId = createGigValidationTx.logs[0].args[0]
+    const fulfilTx = await mockOracle.fulfillOracleRequest(
+      requestId,
+      true,
+    )
     const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
 
     assert.isTrue(fulfilTxEventEmitted)
   }
-  const createGig = createGigFunc.bind(this)
+  async function doActionFunc(gigID, user, action) {
+    let takeGigValidationTx = await skillWallet.validate(
+      'signature',
+      user,
+      action,
+      [],
+      [gigID],
+      [],
+    )
+
+    let validationRequestIdSentEventEmitted =
+      takeGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
+    assert.isTrue(validationRequestIdSentEventEmitted)
+
+    const requestId = takeGigValidationTx.logs[0].args[0]
+    const fulfilTx = await mockOracle.fulfillOracleRequest(
+      requestId,
+      true,
+    )
+
+    const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
+    assert.isTrue(fulfilTxEventEmitted)
+  }
+  async function doActionSuccessfullyFunc(gigID, user, action) {
+    let takeGigValidationTx = await skillWallet.validate(
+      'signature',
+      user,
+      action,
+      [],
+      [gigID],
+      [],
+    )
+
+    let validationRequestIdSentEventEmitted =
+      takeGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
+    assert.isTrue(validationRequestIdSentEventEmitted)
+
+    const requestId = takeGigValidationTx.logs[0].args[0]
+    const fulfilTx = await mockOracle.fulfillOracleRequest(
+      requestId,
+      true,
+    )
+
+    const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
+    assert.isTrue(fulfilTxEventEmitted)
+
+    const gig = await gigs.gigs(gigID)
+    const userAddress = await skillWallet.ownerOf(user);
+
+    switch(action) {
+      case(Action.TakeGig): {
+        assert.equal(gig.status, GigStatus.Taken);
+        assert.equal(gig.taker, userAddress);
+        break;
+      }
+      case(Action.SubmitGig): {
+        assert.equal(gig.status, GigStatus.Submitted);
+        assert.equal(gig.taker, userAddress);
+        break;
+      }
+      case(Action.CompleteGig): {
+        assert.equal(gig.status, GigStatus.Completed);
+        assert.equal(gig.creator, userAddress);
+        break;
+      }
+    }
+
+  }
+
+  const doAction = doActionFunc.bind(this);
+  const createGig = createGigFunc.bind(this);
+  const doActionSuccessfully = doActionSuccessfullyFunc.bind(this);
+  const createGigSuccessfully = createGigSuccessfullyFunc.bind(this)
 
   before(async function () {
     this.erc1820 = await singletons.ERC1820Registry(registryFunder)
-    this.gigStatuses = await GigStatuses.new()
-    AddressProvider.link(this.gigStatuses)
+    gigstatuses = await GigStatuses.new()
+    AddressProvider.link(gigstatuses)
   })
   beforeEach(async function () {
     async function activateSkillWalletFunc(member) {
-      const skillWalletId = await this.skillWallet.getSkillWalletIdByOwner(
+      const skillWalletId = await skillWallet.getSkillWalletIdByOwner(
         member,
       )
-      const skillWalletActivated = await this.skillWallet.isSkillWalletActivated(
+      const skillWalletActivated = await skillWallet.isSkillWalletActivated(
         skillWalletId,
       )
 
       if (!skillWalletActivated) {
-        const pubKeyTx = await this.skillWallet.addPubKeyToSkillWallet(
+        const pubKeyTx = await skillWallet.addPubKeyToSkillWallet(
           skillWalletId,
           'pubKey',
           { from: creator },
@@ -72,10 +203,10 @@ contract('Gigs', function ([
         assert.equal(pubKeyEventEmitted, true)
 
         await this.linkTokenMock.transfer(
-          this.skillWallet.address,
+          skillWallet.address,
           '2000000000000000000',
         )
-        const validationTx = await this.skillWallet.validate(
+        const validationTx = await skillWallet.validate(
           'signature',
           skillWalletId,
           0,
@@ -88,14 +219,14 @@ contract('Gigs', function ([
         assert.isTrue(validationRequestIdSentEventEmitted)
         const requestId = validationTx.logs[0].args[0]
 
-        const fulfilTx = await this.mockOracle.fulfillOracleRequest(
+        const fulfilTx = await mockOracle.fulfillOracleRequest(
           requestId,
           true,
         )
         const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
 
         assert.isTrue(fulfilTxEventEmitted)
-        const isSWActivated = await this.skillWallet.isSkillWalletActivated(
+        const isSWActivated = await skillWallet.isSkillWalletActivated(
           skillWalletId,
         )
         assert.isTrue(isSWActivated)
@@ -105,26 +236,28 @@ contract('Gigs', function ([
     const activateSkillWallet = activateSkillWalletFunc.bind(this)
     // SkillWallet
     this.linkTokenMock = await LinkToken.new()
-    this.mockOracle = await MockOracle.new(this.linkTokenMock.address)
-    this.skillWallet = await SkillWallet.new(
+    mockOracle = await MockOracle.new(this.linkTokenMock.address)
+    skillWallet = await SkillWallet.new(
       this.linkTokenMock.address,
-      this.mockOracle.address,
+      mockOracle.address,
       { from: creator },
     )
 
     this.addressProvder = await AddressProvider.new()
     this.distirbutedTown = await DistributedTown.new(
       'http://someurl.co',
-      this.skillWallet.address,
+      skillWallet.address,
       this.addressProvder.address,
       { from: creator },
     )
     await this.distirbutedTown.deployGenesisCommunities(0, { from: creator })
+    await this.distirbutedTown.deployGenesisCommunities(1, { from: creator })
     const communities = await this.distirbutedTown.getCommunities()
     this.community = await Community.at(communities[0])
+    this.secondCommunity = await Community.at(communities[1])
     this.ditoCreditCommunityHolder = await this.community.ditoCreditsHolder()
     const gigsAddr = await this.community.gigsAddr()
-    this.gigs = await Gigs.at(gigsAddr)
+    gigs = await Gigs.at(gigsAddr)
     await this.community.joinNewMember(
       1,
       1,
@@ -158,18 +291,41 @@ contract('Gigs', function ([
       web3.utils.toWei(new BN(2006)),
       { from: thirdMember },
     )
+
+    await this.secondCommunity.joinNewMember(
+      1,
+      1,
+      2,
+      2,
+      3,
+      3,
+      'http://someuri.co',
+      web3.utils.toWei(new BN(2006)),
+      { from: notAMember },
+    )
     await activateSkillWallet(firstMember)
     await activateSkillWallet(secondMember)
     await activateSkillWallet(thirdMember)
-    this.firstMemberSWId = 1
-    this.secondMemberSWId = 2
-    this.thirdMemberSWId = 3
+    await activateSkillWallet(notAMember)
+    this.firstMemberSWId = await skillWallet.getSkillWalletIdByOwner(firstMember);
+    this.secondMemberSWId = await skillWallet.getSkillWalletIdByOwner(secondMember);
+    this.thirdMemberSWId = await skillWallet.getSkillWalletIdByOwner(thirdMember);
+    this.notAMemberSWId = await skillWallet.getSkillWalletIdByOwner(notAMember);
+
+    assert.isTrue(await skillWallet.isSkillWalletActivated(this.firstMemberSWId));
+    assert.isTrue(await skillWallet.isSkillWalletActivated(this.secondMemberSWId));
+    assert.isTrue(await skillWallet.isSkillWalletActivated(this.thirdMemberSWId));
+    assert.isTrue(await skillWallet.isSkillWalletActivated(this.notAMemberSWId));
+    assert.isTrue(await this.community.isMember(firstMember));
+    assert.isTrue(await this.community.isMember(secondMember));
+    assert.isTrue(await this.community.isMember(thirdMember));
+    assert.isFalse(await this.community.isMember(notAMember));
   })
 
-  describe('Gigs flow', async function () {
+  describe.only('Gigs flow', async function () {
     describe('Creating a gig', async function () {
       it('should fail when called directly', async function () {
-        const tx = this.gigs.createGig(
+        const tx = gigs.createGig(
           '0x093ECac1110EF08976A0A1F24393c3e48936489D',
           web3.utils.toWei(new BN(200)),
           metadataUrl,
@@ -178,43 +334,20 @@ contract('Gigs', function ([
         await truffleAssert.reverts(tx, 'Only SWActionExecutor can call this.')
       })
       it("should fail when the gig creator isn't a community member", async function () {
-        const gig = await this.gigs.gigs(0)
-        assert.equal(gig.creator, '0x0000000000000000000000000000000000000000')
+        const currentCount = await gigs.gigsCount();
+        await createGig(this.notAMemberSWId, 60);
+        const afterCreateCallCount = await gigs.gigsCount();
+        assert.equal(currentCount.toString(), afterCreateCallCount.toString());
 
-        const validationTx = await this.skillWallet.validate(
-          'signature',
-          3,
-          2,
-          [],
-          [],
-          [],
-        )
-        const validationRequestIdSentEventEmitted =
-          validationTx.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted)
-        const requestId = validationTx.logs[0].args[0]
-        const fulfilTx = await this.mockOracle.fulfillOracleRequest(
-          requestId,
-          true,
-        )
-        const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-
-        assert.isTrue(fulfilTxEventEmitted)
-
-        const gigAfter = await this.gigs.gigs(0)
-        assert.equal(
-          gigAfter.creator,
-          '0x0000000000000000000000000000000000000000',
-        )
       })
       it('should fail when the params are not correct', async function () {
-        const gig = await this.gigs.gigs(0)
+        const gig = await gigs.gigs(0)
         assert.equal(gig.creator, '0x0000000000000000000000000000000000000000')
 
-        const validationTx1 = await this.skillWallet.validate(
+        const validationTx1 = await skillWallet.validate(
           'signature',
           3,
-          2,
+          Action.CreateGig,
           ['http://...'],
           [2],
           [],
@@ -223,15 +356,15 @@ contract('Gigs', function ([
           validationTx1.logs[1].event === 'ValidationRequestIdSent'
         assert.isTrue(validationRequestIdSentEventEmitted)
 
-        await this.mockOracle.fulfillOracleRequest(
+        await mockOracle.fulfillOracleRequest(
           validationTx1.logs[0].args[0],
           true,
         )
 
-        const validationTx2 = await this.skillWallet.validate(
+        const validationTx2 = await skillWallet.validate(
           'signature',
           3,
-          2,
+          Action.CreateGig,
           ['http://...'],
           [],
           [],
@@ -240,14 +373,14 @@ contract('Gigs', function ([
           validationTx2.logs[1].event === 'ValidationRequestIdSent'
         assert.isTrue(validationRequestIdSentEventEmitted2)
 
-        await this.mockOracle.fulfillOracleRequest(
+        await mockOracle.fulfillOracleRequest(
           validationTx2.logs[0].args[0],
           true,
         )
-        const validationTx3 = await this.skillWallet.validate(
+        const validationTx3 = await skillWallet.validate(
           'signature',
           3,
-          2,
+          Action.CreateGig,
           ['http://...'],
           [2000],
           [],
@@ -256,14 +389,14 @@ contract('Gigs', function ([
           validationTx3.logs[1].event === 'ValidationRequestIdSent'
         assert.isTrue(validationRequestIdSentEventEmitted3)
 
-        await this.mockOracle.fulfillOracleRequest(
+        await mockOracle.fulfillOracleRequest(
           validationTx3.logs[0].args[0],
           true,
         )
-        const validationTx4 = await this.skillWallet.validate(
+        const validationTx4 = await skillWallet.validate(
           'signature',
           3,
-          2,
+          Action.CreateGig,
           [],
           [700],
           [],
@@ -272,7 +405,7 @@ contract('Gigs', function ([
           validationTx4.logs[1].event === 'ValidationRequestIdSent'
         assert.isTrue(validationRequestIdSentEventEmitted4)
 
-        const fulfilTx = await this.mockOracle.fulfillOracleRequest(
+        const fulfilTx = await mockOracle.fulfillOracleRequest(
           validationTx4.logs[0].args[0],
           true,
         )
@@ -280,7 +413,7 @@ contract('Gigs', function ([
 
         assert.isTrue(fulfilTxEventEmitted)
 
-        const gigAfter = await this.gigs.gigs(0)
+        const gigAfter = await gigs.gigs(0)
         assert.equal(
           gigAfter.creator,
           '0x0000000000000000000000000000000000000000',
@@ -291,8 +424,8 @@ contract('Gigs', function ([
           this.ditoCreditCommunityHolder,
         )
 
-        await createGig(firstMember, 720)
-        await createGig(firstMember, 720)
+        await createGigSuccessfully(this.firstMemberSWId, 720)
+        await createGigSuccessfully(this.firstMemberSWId, 720)
 
         const creatorBalance = await this.community.balanceOf(firstMember)
         assert.equal(
@@ -308,12 +441,12 @@ contract('Gigs', function ([
           +web3.utils.fromWei(creditsHolderBalanceAfter.toString()),
         )
 
-        const gigsCountBefore = await this.gigs.gigsCount()
+        const gigsCountBefore = await gigs.gigsCount()
         assert.equal(gigsCountBefore, 2)
-        await createGig(firstMember, 720)
-        const gigsCountAfter = await this.gigs.gigsCount()
+        await createGig(this.firstMemberSWId, 720)
+        const gigsCountAfter = await gigs.gigsCount()
 
-        assert.equal(gigsCountBefore + 1, gigsCountAfter)
+        assert.equal(gigsCountBefore.toString(), gigsCountAfter.toString())
       })
       it('should create a gig and transfer the credits correctly', async function () {
         const balanceBefore = await this.community.balanceOf(firstMember)
@@ -322,27 +455,7 @@ contract('Gigs', function ([
         )
 
         const creditsAmount = 50
-        let createGigValidationTx = await this.skillWallet.validate(
-          'signature',
-          1,
-          2,
-          ['http://...'],
-          [web3.utils.toWei(new BN(creditsAmount))],
-          [],
-        )
-
-        let validationRequestIdSentEventEmitted =
-          createGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted)
-
-        const requestId = createGigValidationTx.logs[0].args[0]
-        const fulfilTx = await this.mockOracle.fulfillOracleRequest(
-          requestId,
-          true,
-        )
-        const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-
-        assert.isTrue(fulfilTxEventEmitted)
+        await createGigSuccessfully(this.firstMemberSWId, creditsAmount);
 
         const balanceAfter = await this.community.balanceOf(firstMember)
         const balanceCreditsHolderAfter = await this.community.balanceOf(
@@ -355,16 +468,16 @@ contract('Gigs', function ([
         )
         assert.equal(
           +web3.utils.fromWei(balanceCreditsHolderBefore.toString()) +
-            creditsAmount,
+          creditsAmount,
           +web3.utils.fromWei(balanceCreditsHolderAfter.toString()),
         )
 
-        const gigId = (await this.gigs.gigsCount()) - 1
-        const gig = await this.gigs.gigs(gigId)
+        const gigId = (await gigs.gigsCount()) - 1
+        const gig = await gigs.gigs(gigId)
 
         assert.equal(gig.creator, firstMember)
         assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
-        assert.equal(gig.status, 0)
+        assert.equal(gig.status, GigStatus.Open)
         assert.equal(
           gig.ditoCredits.toString(),
           web3.utils.toWei(new BN(50)).toString(),
@@ -373,630 +486,218 @@ contract('Gigs', function ([
     })
 
     describe('Take a gig', async function () {
-      beforeEach(async function () {
-        console.log('beforeEach')
-        const gigsCountBefore = await this.gigs.gigsCount()
-        const creditsAmount = 50
-        let createGigValidationTx = await this.skillWallet.validate(
-          'signature',
-          1,
-          2,
-          ['http://...'],
-          [web3.utils.toWei(new BN(creditsAmount))],
-          [],
-        )
-
-        let validationRequestIdSentEventEmitted =
-          createGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted)
-
-        const requestId = createGigValidationTx.logs[0].args[0]
-        const fulfilTx = await this.mockOracle.fulfillOracleRequest(
-          requestId,
-          true,
-        )
-        const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-
-        assert.isTrue(fulfilTxEventEmitted)
-        const gigsCountAfter = await this.gigs.gigsCount()
-
-        assert.equal(
-          +gigsCountBefore.toString() + 1,
-          +gigsCountAfter.toString(),
-        )
-        const gig = await this.gigs.gigs(gigsCountAfter - 1)
-
-        assert.equal(gig.creator, firstMember)
-        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
-        assert.equal(gig.status, 0)
-        assert.equal(
-          gig.ditoCredits.toString(),
-          web3.utils.toWei(new BN(50)).toString(),
-        )
-        console.log(gig)
-      })
       it('should fail when called directly', async function () {
-        const tx = this.gigs.takeGig(1, firstMember)
+        const tx = gigs.takeGig(1, firstMember)
 
         await truffleAssert.reverts(tx, 'Only SWActionExecutor can call this.')
       })
       it('should fail when the gig creator tries to take the gig', async function () {
-        const gigID = (await this.gigs.gigsCount()) - 1
+        await createGigSuccessfully(this.firstMemberSWId, 50);
+        const gigID = (await gigs.gigsCount()) - 1
 
-        let takeGigValidationTx = await this.skillWallet.validate(
-          'signature',
-          1,
-          3,
-          [],
-          [gigID],
-          [],
-        )
+        await doAction(gigID, this.firstMemberSWId, Action.TakeGig);
 
-        let validationRequestIdSentEventEmitted =
-          takeGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted)
-
-        const requestId = takeGigValidationTx.logs[0].args[0]
-        const fulfilTx = await this.mockOracle.fulfillOracleRequest(
-          requestId,
-          true,
-        )
-        const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-        assert.isTrue(fulfilTxEventEmitted)
-
-        const gig = await this.gigs.gigs(gigID)
+        const gig = await gigs.gigs(gigID)
 
         assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
-        assert.notEqual(
-          gig.creator,
-          '0x0000000000000000000000000000000000000000',
-        )
+        assert.equal(gig.creator, firstMember)
+        assert.equal(gig.status, GigStatus.Open);
       })
       it("should fail when the gig doesn't exist yet", async function () {
         const gigID = 120
-        let takeGigValidationTx = await this.skillWallet.validate(
-          'signature',
-          1,
-          3,
-          [],
-          [gigID],
-          [],
-        )
 
-        let validationRequestIdSentEventEmitted =
-          takeGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted)
+        await doAction(gigID, this.secondMemberSWId, Action.TakeGig);
 
-        const requestId = takeGigValidationTx.logs[0].args[0]
-        const fulfilTx = await this.mockOracle.fulfillOracleRequest(
-          requestId,
-          true,
-        )
-        const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-        assert.isTrue(fulfilTxEventEmitted)
-
-        const gig = await this.gigs.gigs(gigID)
+        const gig = await gigs.gigs(gigID)
 
         assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
         assert.equal(gig.creator, '0x0000000000000000000000000000000000000000')
       })
-      // it.only('should fail when the taker is not a part of the community', async function () {
-      //   const gigID = await this.gigs.gigsCount() - 1;
-      //   let takeGigValidationTx = await this.skillWallet.validate(
-      //     'signature',
-      //     1,
-      //     3,
-      //     [],
-      //     [gigID],
-      //     [],
-      //   )
+      it("should fail when the taker isn't a community member", async function () {
+        await createGigSuccessfully(this.firstMemberSWId, 60);
+        const gigID = await gigs.gigsCount() - 1;
 
-      //   let validationRequestIdSentEventEmitted =
-      //   takeGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-      //   assert.isTrue(validationRequestIdSentEventEmitted)
+        await doAction(gigID, this.notAMemberSWId, Action.TakeGig);
 
-      //   const requestId = takeGigValidationTx.logs[0].args[0]
-      //   const fulfilTx = await this.mockOracle.fulfillOracleRequest(
-      //     requestId,
-      //     true,
-      //   )
-      //   const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-      //   assert.isTrue(fulfilTxEventEmitted);
+        const gig = await gigs.gigs(gigID)
 
-      //   const gig = await this.gigs.gigs(gigID);
-
-      //   assert.equal(gig.taker, '0x0000000000000000000000000000000000000000');
-      //   assert.notEqual(gig.creator, '0x0000000000000000000000000000000000000000');
-      // })
-      it('should fail when the gig is already taken', async function () {
-        const gigID = (await this.gigs.gigsCount()) - 1
-
-        let takeGigValidationTx = await this.skillWallet.validate(
-          'signature',
-          2,
-          3,
-          [],
-          [gigID],
-          [],
-        )
-
-        let validationRequestIdSentEventEmitted =
-          takeGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted)
-
-        const requestId = takeGigValidationTx.logs[0].args[0]
-        const fulfilTx = await this.mockOracle.fulfillOracleRequest(
-          requestId,
-          true,
-        )
-        const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-        assert.isTrue(fulfilTxEventEmitted)
-        const gigBefore = await this.gigs.gigs(gigID)
-        // assert.equal(gigBefore.status.toString(), '1');
-        assert.equal(gigBefore.taker, firstMember)
-
-        await this.skillWallet.validate('signature', 3, 3, [], [gigID], [])
-
-        const gigAfter = await this.gigs.gigs(gigID)
-        assert.equal(gigAfter.status.toString(), '1')
-        assert.equal(gigAfter.taker, firstMember)
-        assert.notEqual(
-          gigAfter.creator,
-          '0x0000000000000000000000000000000000000000',
-        )
-      })
-      it.only('should succeed taking a gig and should update the state properly', async function () {
-        const gigID = (await this.gigs.gigsCount()) - 1
-
-        let takeGigValidationTx = await this.skillWallet.validate(
-          'signature',
-          2,
-          3,
-          [],
-          [gigID],
-          [],
-        )
-
-        let validationRequestIdSentEventEmitted =
-          takeGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted)
-
-        const requestId = takeGigValidationTx.logs[0].args[0]
-        const fulfilTx = await this.mockOracle.fulfillOracleRequest(
-          requestId,
-          true,
-        )
-        const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-        assert.isTrue(fulfilTxEventEmitted)
-
-        const gig = await this.gigs.gigs(gigID)
-
+        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
         assert.equal(gig.creator, firstMember)
-        assert.equal(gig.taker, secondMember)
-        assert.equal(gig.status, 1)
-        assert.equal(
-          gig.ditoCredits.toString(),
-          web3.utils.toWei(new BN(200)).toString(),
-        )
+        assert.equal(gig.status, GigStatus.Open);
+
+      })
+      it('should fail when the gig is already taken', async function () {
+        await createGigSuccessfully(this.firstMemberSWId, 50);
+        const gigID = (await gigs.gigsCount()) - 1;
+
+        await doAction(gigID, this.secondMemberSWId, Action.TakeGig);
+
+        const gigBefore = await gigs.gigs(gigID)
+
+        assert.equal(gigBefore.status.toString(), '1');
+        assert.equal(gigBefore.taker, secondMember)
+
+        await doAction(gigID, this.thirdMemberSWId, Action.TakeGig);
+
+        const gigAfter = await gigs.gigs(gigID)
+        assert.equal(gigAfter.status.toString(), '1')
+        assert.equal(gigAfter.taker, secondMember)
+        assert.equal(gigAfter.creator, firstMember)
+      })
+      it('should succeed taking a gig and should update the state properly', async function () {
+        await createGigSuccessfully(this.firstMemberSWId, 50)
+        const gigID = (await gigs.gigsCount()) - 1;
+        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.TakeGig);
       })
     })
 
     describe('Submit a gig', async function () {
       it('should fail when called directly', async function () {
-        const tx = this.gigs.createGig(
-          '0x093ECac1110EF08976A0A1F24393c3e48936489D',
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
+        const tx = gigs.submitGig(
+          1,
+          secondMember
         )
 
         await truffleAssert.reverts(tx, 'Only SWActionExecutor can call this.')
       })
       it('should fail when the sender is not the taker', async function () {
-        const createGigTx = await this.gigs.createGig(
-          firstMember,
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
-        )
+        const creditsAmount = 60;
+        await createGigSuccessfully(this.firstMemberSWId, creditsAmount);
+        const gigID = (await gigs.gigsCount()) - 1;
+        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.TakeGig);
 
-        const gigtCreatedEvent = createGigTx.logs[1].event === 'GigCreated'
-        const gigId = createGigTx.logs[1].args[1]
+        await doAction(gigID, this.thirdMemberSWId, Action.SubmitGig);
 
-        assert.equal(gigtCreatedEvent, true)
-
-        const markAsValidTx = await this.gigs.markAsValid(gigId)
-        const markAsValidEvent = markAsValidTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidEvent, true)
-
-        const takeGigTx = await this.gigs.takeGig(gigId, secondMember)
-
-        const takeGigEvent = takeGigTx.logs[0].event === 'GigTaken'
-        assert.equal(takeGigEvent, true)
-
-        const markAsValidTakenTx = await this.gigs.markAsValid(gigId)
-        const markAsValidTakenEvent =
-          markAsValidTakenTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidTakenEvent, true)
-        const submitGigTx = this.gigs.submitGig(gigId, thirdMember)
-        await truffleAssert.reverts(
-          submitGigTx,
-          'Only the taker can submit the gig',
-        )
-      })
-      it("should fail when the gig doesn't exist yet", async function () {
-        const gigId = 120
-        const takeGigTx = this.gigs.submitGig(gigId, firstMember)
-
-        await truffleAssert.reverts(takeGigTx, 'Invalid gigId')
-      })
-      it("should fail when the gig hasn't been validated by the creator yet", async function () {
-        const createGigTx = await this.gigs.createGig(
-          firstMember,
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
-        )
-
-        const gigtCreatedEvent = createGigTx.logs[1].event === 'GigCreated'
-        const gigId = createGigTx.logs[1].args[1]
-
-        assert.equal(gigtCreatedEvent, true)
-
-        const markAsValidTx = await this.gigs.markAsValid(gigId)
-        const markAsValidEvent = markAsValidTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidEvent, true)
-
-        const takeGigTx = await this.gigs.takeGig(gigId, secondMember)
-
-        const takeGigEvent = takeGigTx.logs[0].event === 'GigTaken'
-        assert.equal(takeGigEvent, true)
-
-        const submitTx = this.gigs.submitGig(gigId, secondMember)
-
-        await truffleAssert.reverts(
-          submitTx,
-          'The gig should be validated by the creator.',
-        )
-      })
-      it("should fail when the gig isn't taken yet", async function () {
-        const createGigTx = await this.gigs.createGig(
-          firstMember,
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
-        )
-
-        const gigtCreatedEvent = createGigTx.logs[1].event === 'GigCreated'
-        const gigId = createGigTx.logs[1].args[1]
-
-        assert.equal(gigtCreatedEvent, true)
-        const markAsValidTx = await this.gigs.markAsValid(gigId)
-        const markAsValidEvent = markAsValidTx.logs[0].event === 'GigValidated'
-
-        assert.equal(markAsValidEvent, true)
-
-        const invalidSubmitGig = this.gigs.submitGig(gigId, thirdMember)
-
-        await truffleAssert.reverts(invalidSubmitGig, 'Gig not taken yet.')
-      })
-      it('should succeed submitting a gig and should update the state properly', async function () {
-        const createGigTx = await this.gigs.createGig(
-          firstMember,
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
-        )
-
-        const gigtCreatedEvent = createGigTx.logs[1].event === 'GigCreated'
-        const gigId = createGigTx.logs[1].args[1]
-
-        assert.equal(gigtCreatedEvent, true)
-
-        const markAsValidTx = await this.gigs.markAsValid(gigId)
-        const markAsValidEvent = markAsValidTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidEvent, true)
-
-        const takeGigTx = await this.gigs.takeGig(gigId, secondMember)
-
-        const takeGigEvent = takeGigTx.logs[0].event === 'GigTaken'
-        assert.equal(takeGigEvent, true)
-
-        const markAsValidTakenTx = await this.gigs.markAsValid(gigId)
-        const markAsValidTakenEvent =
-          markAsValidTakenTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidTakenEvent, true)
-
-        const submitTx = await this.gigs.submitGig(gigId, secondMember)
-
-        const subnittedGigEvent = submitTx.logs[0].event === 'GigSubmitted'
-        assert.equal(subnittedGigEvent, true)
-
-        const gig = await this.gigs.gigs(gigId)
+        const gig = await gigs.gigs(gigID)
 
         assert.equal(gig.creator, firstMember)
         assert.equal(gig.taker, secondMember)
-        assert.equal(gig.status, 2)
+        assert.equal(gig.status, GigStatus.Taken)
         assert.equal(
           gig.ditoCredits.toString(),
-          web3.utils.toWei(new BN(200)).toString(),
+          web3.utils.toWei(new BN(creditsAmount)).toString(),
         )
+      })
+      it("should fail when the gig doesn't exist yet", async function () {
+        const gigID = 120;
+
+        await doAction(gigID, this.thirdMemberSWId, Action.SubmitGig);
+
+        const gig = await gigs.gigs(gigID)
+
+        assert.equal(gig.creator, '0x0000000000000000000000000000000000000000')
+        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
+      })
+      it("should fail when the gig isn't taken yet", async function () {
+
+        await createGigSuccessfully(this.firstMemberSWId, 60);
+        const gigID = (await gigs.gigsCount()) - 1;
+
+        await doAction(gigID, this.firstMemberSWId, Action.SubmitGig);
+
+        const gigAfter = await gigs.gigs(gigID)
+
+        assert.equal(gigAfter.creator, firstMember)
+        assert.equal(gigAfter.taker, '0x0000000000000000000000000000000000000000')
+        assert.equal(gigAfter.status, GigStatus.Open)
+
+      })
+      it('should succeed submitting a gig and should update the state properly', async function () {
+        await createGigSuccessfully(this.firstMemberSWId, 60);
+        const gigID = (await gigs.gigsCount()) - 1;
+
+        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.TakeGig);
+        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.SubmitGig);
+
+        const gig = await gigs.gigs(gigID)
+
+        assert.equal(gig.creator, firstMember)
+        assert.equal(gig.taker, secondMember)
+        assert.equal(gig.status, GigStatus.Submitted)
       })
     })
 
     describe('Complete a gig', async function () {
       it('should fail when called directly', async function () {
-        const tx = this.gigs.createGig(
-          '0x093ECac1110EF08976A0A1F24393c3e48936489D',
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
+        const tx = gigs.completeGig(
+          1,
+          secondMember
         )
-
         await truffleAssert.reverts(tx, 'Only SWActionExecutor can call this.')
       })
+
       it("should fail when the gig doesn't exist yet", async function () {
-        const gigId = 120
-        const takeGigTx = this.gigs.completeGig(gigId, firstMember)
+        const gigID = 120;
+        await doAction(gigID, this.firstMemberSWId, Action.CompleteGig);
 
-        await truffleAssert.reverts(takeGigTx, 'Invalid gigId')
+        const gig = await gigs.gigs(gigID);
+        assert.equal(gig.creator, '0x0000000000000000000000000000000000000000')
+        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
       })
+
       it("should fail when the completor isn't the creator", async function () {
-        const createGigTx = await this.gigs.createGig(
-          firstMember,
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
-        )
 
-        const gigtCreatedEvent = createGigTx.logs[1].event === 'GigCreated'
-        const gigId = createGigTx.logs[1].args[1]
+        await createGigSuccessfully(this.firstMemberSWId, 60);
+        const gigID = await gigs.gigsCount() - 1;
 
-        assert.equal(gigtCreatedEvent, true)
+        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.TakeGig);
+        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.SubmitGig);
 
-        const markAsValidTx = await this.gigs.markAsValid(gigId)
-        const markAsValidEvent = markAsValidTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidEvent, true)
+        await doAction(gigID, this.secondMemberSWId, Action.CompleteGig);
+        await doAction(gigID, this.thirdMemberSWId, Action.CompleteGig);
 
-        const takeGigTx = await this.gigs.takeGig(gigId, secondMember)
-
-        const takeGigEvent = takeGigTx.logs[0].event === 'GigTaken'
-        assert.equal(takeGigEvent, true)
-
-        const markAsValidTakenTx = await this.gigs.markAsValid(gigId)
-        const markAsValidTakenEvent =
-          markAsValidTakenTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidTakenEvent, true)
-
-        const submitTx = await this.gigs.submitGig(gigId, secondMember)
-
-        const subnittedGigEvent = submitTx.logs[0].event === 'GigSubmitted'
-        assert.equal(subnittedGigEvent, true)
-
-        const markAsValidSubmittedTx = await this.gigs.markAsValid(gigId)
-        const markAsValidSubmittedEvent =
-          markAsValidSubmittedTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidSubmittedEvent, true)
-
-        const completeTx = this.gigs.completeGig(gigId, secondMember)
-
-        await truffleAssert.reverts(
-          completeTx,
-          'Can be completed only by the creator.',
-        )
-      })
-      it("should fail when the gig submission validation hasn't passed yet", async function () {
-        const createGigTx = await this.gigs.createGig(
-          firstMember,
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
-        )
-
-        const gigtCreatedEvent = createGigTx.logs[1].event === 'GigCreated'
-        const gigId = createGigTx.logs[1].args[1]
-
-        assert.equal(gigtCreatedEvent, true)
-
-        const markAsValidTx = await this.gigs.markAsValid(gigId)
-        const markAsValidEvent = markAsValidTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidEvent, true)
-
-        const takeGigTx = await this.gigs.takeGig(gigId, secondMember)
-
-        const takeGigEvent = takeGigTx.logs[0].event === 'GigTaken'
-        assert.equal(takeGigEvent, true)
-
-        const markAsValidTakenTx = await this.gigs.markAsValid(gigId)
-        const markAsValidTakenEvent =
-          markAsValidTakenTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidTakenEvent, true)
-
-        const submitTx = await this.gigs.submitGig(gigId, secondMember)
-
-        const subnittedGigEvent = submitTx.logs[0].event === 'GigSubmitted'
-        assert.equal(subnittedGigEvent, true)
-
-        const completeTx = this.gigs.completeGig(gigId, firstMember)
-
-        await truffleAssert.reverts(
-          completeTx,
-          'The gig should be validated by the creator.',
-        )
-      })
-      it("should fail when the gig isn't submitted yet", async function () {
-        const createGigTx = await this.gigs.createGig(
-          firstMember,
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
-        )
-
-        const gigtCreatedEvent = createGigTx.logs[1].event === 'GigCreated'
-        const gigId = createGigTx.logs[1].args[1]
-
-        assert.equal(gigtCreatedEvent, true)
-
-        const markAsValidTx = await this.gigs.markAsValid(gigId)
-        const markAsValidEvent = markAsValidTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidEvent, true)
-
-        const takeGigTx = await this.gigs.takeGig(gigId, secondMember)
-
-        const takeGigEvent = takeGigTx.logs[0].event === 'GigTaken'
-        assert.equal(takeGigEvent, true)
-
-        const markAsValidTakenTx = await this.gigs.markAsValid(gigId)
-        const markAsValidTakenEvent =
-          markAsValidTakenTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidTakenEvent, true)
-
-        const completeTx = this.gigs.completeGig(gigId, firstMember)
-
-        await truffleAssert.reverts(completeTx, 'Gig not submitted yet.')
-      })
-      it('should succeed completing a gig and should update the state properly', async function () {
-        const createGigTx = await this.gigs.createGig(
-          firstMember,
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
-        )
-
-        const gigtCreatedEvent = createGigTx.logs[1].event === 'GigCreated'
-        const gigId = createGigTx.logs[1].args[1]
-
-        assert.equal(gigtCreatedEvent, true)
-
-        const markAsValidTx = await this.gigs.markAsValid(gigId)
-        const markAsValidEvent = markAsValidTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidEvent, true)
-
-        const takeGigTx = await this.gigs.takeGig(gigId, secondMember)
-
-        const takeGigEvent = takeGigTx.logs[0].event === 'GigTaken'
-        assert.equal(takeGigEvent, true)
-
-        const markAsValidTakenTx = await this.gigs.markAsValid(gigId)
-        const markAsValidTakenEvent =
-          markAsValidTakenTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidTakenEvent, true)
-
-        const submitTx = await this.gigs.submitGig(gigId, secondMember)
-
-        const submittedGigEvent = submitTx.logs[0].event === 'GigSubmitted'
-        assert.equal(submittedGigEvent, true)
-
-        const markAsValidSubmittedTx = await this.gigs.markAsValid(gigId)
-        const markAsValidSubmittedEvent =
-          markAsValidSubmittedTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidSubmittedEvent, true)
-
-        const completeTx = await this.gigs.completeGig(gigId, firstMember)
-
-        const completedGigEvent = completeTx.logs[0].event === 'GigCompleted'
-        assert.equal(completedGigEvent, true)
-
-        const gig = await this.gigs.gigs(gigId)
+        const gig = await gigs.gigs(gigID)
 
         assert.equal(gig.creator, firstMember)
         assert.equal(gig.taker, secondMember)
-        assert.equal(gig.status, 3)
-        assert.equal(
-          gig.ditoCredits.toString(),
-          web3.utils.toWei(new BN(200)).toString(),
-        )
+        assert.equal(gig.status, GigStatus.Submitted)
+
       })
 
-      it('should trasnfer the credits to the taker once validation has passed', async function () {
-        const takerBalanceBeforeTakingGig = await this.community.balanceOf(
+      it('should complete a gig and transfer the credits accordingly', async function () {
+        const credits = 60;
+        await createGigSuccessfully(this.firstMemberSWId, credits);
+        const gigID = await gigs.gigsCount() - 1;
+
+        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.TakeGig);
+        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.SubmitGig);
+
+        const takerBalanceBeforeComplete = await this.community.balanceOf(
           secondMember,
-        )
-
-        const createGigTx = await this.gigs.createGig(
-          firstMember,
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
-        )
-
-        const gigtCreatedEvent = createGigTx.logs[1].event === 'GigCreated'
-        const gigId = createGigTx.logs[1].args[1]
-
-        assert.equal(gigtCreatedEvent, true)
-
-        const markAsValidTx = await this.gigs.markAsValid(gigId)
-        const markAsValidEvent = markAsValidTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidEvent, true)
-
-        const takeGigTx = await this.gigs.takeGig(gigId, secondMember)
-
-        const takeGigEvent = takeGigTx.logs[0].event === 'GigTaken'
-        assert.equal(takeGigEvent, true)
-
-        const markAsValidTakenTx = await this.gigs.markAsValid(gigId)
-        const markAsValidTakenEvent =
-          markAsValidTakenTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidTakenEvent, true)
-
-        const submitTx = await this.gigs.submitGig(gigId, secondMember)
-
-        const submittedGigEvent = submitTx.logs[0].event === 'GigSubmitted'
-        assert.equal(submittedGigEvent, true)
-
-        const markAsValidSubmittedTx = await this.gigs.markAsValid(gigId)
-        const markAsValidSubmittedEvent =
-          markAsValidSubmittedTx.logs[0].event === 'GigValidated'
-        assert.equal(markAsValidSubmittedEvent, true)
-
-        const completeTx = await this.gigs.completeGig(gigId, firstMember)
-
-        const completedGigEvent = completeTx.logs[0].event === 'GigCompleted'
-        assert.equal(completedGigEvent, true)
-
-        const takerBalanceBeforeCompleteValidation = await this.community.balanceOf(
-          secondMember,
-        )
-
-        assert.equal(
-          takerBalanceBeforeCompleteValidation.toString(),
-          takerBalanceBeforeTakingGig.toString(),
         )
 
         const ditoHolderBalanceBeforeCompletion = await this.community.balanceOf(
           this.ditoCreditCommunityHolder,
         )
-        const gigBeforeCompletion = await this.gigs.gigs(gigId)
-        assert.equal(gigBeforeCompletion.status, 3)
 
-        const markAsValidCompletedTx = await this.gigs.markAsValid(gigId)
-        const markAsValidCompletedEvent =
-          markAsValidCompletedTx.logs[0].event === 'GigValidated'
-        const trasnferredCredits = markAsValidCompletedTx.logs[0].args[1]
-        const trasnferredCreditsAmount = markAsValidCompletedTx.logs[0].args[2]
+        await doActionSuccessfully(gigID, this.firstMemberSWId, Action.CompleteGig);
 
-        assert.equal(markAsValidCompletedEvent, true)
+        const gig = await gigs.gigs(gigID)
+
+        assert.equal(gig.creator, firstMember)
+        assert.equal(gig.taker, secondMember)
+        assert.equal(gig.status, GigStatus.Completed)
         assert.equal(
-          trasnferredCreditsAmount.toString(),
-          web3.utils.toWei(new BN(200)).toString(),
+          gig.ditoCredits.toString(),
+          web3.utils.toWei(new BN(credits)).toString(),
         )
-        assert.equal(trasnferredCredits, true)
 
-        const takerBalanceAfterCompleteValidation = await this.community.balanceOf(
+        const takerBalanceAfterComplete = await this.community.balanceOf(
           secondMember,
         )
         const ditoHolderBalanceAfterCompletion = await this.community.balanceOf(
           this.ditoCreditCommunityHolder,
         )
 
-        const gig = await this.gigs.gigs(gigId)
-
         assert.equal(
-          +web3.utils.fromWei(takerBalanceAfterCompleteValidation.toString()),
-          +web3.utils.fromWei(takerBalanceBeforeCompleteValidation.toString()) +
-            +web3.utils.fromWei(gig.ditoCredits.toString()),
+          +web3.utils.fromWei(takerBalanceAfterComplete.toString()),
+          +web3.utils.fromWei(takerBalanceBeforeComplete.toString()) +
+          +web3.utils.fromWei(gig.ditoCredits.toString()),
         )
         assert.equal(
           +web3.utils.fromWei(ditoHolderBalanceAfterCompletion.toString()),
           +web3.utils.fromWei(ditoHolderBalanceBeforeCompletion.toString()) -
-            +web3.utils.fromWei(gig.ditoCredits.toString()),
-        )
-
-        assert.equal(gig.creator, firstMember)
-        assert.equal(gig.taker, secondMember)
-        assert.equal(gig.status, 3)
-        assert.equal(
-          gig.ditoCredits.toString(),
-          web3.utils.toWei(new BN(200)).toString(),
+          +web3.utils.fromWei(gig.ditoCredits.toString()),
         )
       })
     })
