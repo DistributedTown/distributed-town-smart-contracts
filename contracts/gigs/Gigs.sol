@@ -101,6 +101,8 @@ contract Gigs is IGigs, IERC721Metadata, ISWActionExecutor, ERC721 {
 
         _changeStatus(_gigId, GigStatuses.GigStatus.Completed);
 
+        community.transferCredits(gigs[_gigId].taker, gigs[_gigId].ditoCredits);
+
         emit GigCompleted(_gigId);
     }
 
@@ -115,9 +117,12 @@ contract Gigs is IGigs, IERC721Metadata, ISWActionExecutor, ERC721 {
         require(uint(action) > 1 && uint(action) < 6, "Invalid action!");
         require(intParams.length > 0, "Missing parameter!");
         require(
-                action == Types.Action.CreateGig && 
-                intParams.length >= 1 && 
-                stringParams.length >= 1,
+                action != Types.Action.CreateGig ||
+                (
+                    action == Types.Action.CreateGig && 
+                    intParams.length >= 1 && 
+                    stringParams.length >= 1
+                ),
                 "Missing parameters"
         );
         require(caller != address(0), "Caller can't be the zero address");

@@ -33,3 +33,7 @@ Terminal #1:
 4. Run `yarn createCommunity`
 
 5. Run `yarn deployGigsRegistry`
+
+
+Kovan DistributedTown.sol - 0xF21ebA9A57f09c24fcA9A9BDBB0E83dFFF261C0E
+using SW  - 0x7426575fa17c319ca85591a1211E5574f49694aB
