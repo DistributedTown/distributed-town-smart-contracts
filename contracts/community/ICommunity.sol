@@ -34,6 +34,7 @@ interface ICommunity {
     function leave(address memberAddress) external;
 
     function getMembers() external view returns (uint256[] memory);
+    function getMemberAddresses() public view override returns (address[] memory);
 
     // TODO: check called only by milestones!
     function transferToCommunity(address from, uint256 amount) external;
