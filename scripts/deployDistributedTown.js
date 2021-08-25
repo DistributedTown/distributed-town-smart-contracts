@@ -7,7 +7,7 @@ const main = async () => {
     const deployerWallet = ethers.provider.getSigner();
     const deployerWalletAddress = await deployerWallet.getAddress();
     // const skillWalletAddress = "0x301214E981aAE83163A70266832748fB2D030156";
-    const skillWalletAddress = '0x7426575fa17c319ca85591a1211E5574f49694aB';
+    const skillWalletAddress = '0xF89424a725298737086812173f0Dc7DfD221Dc60';
     console.log("\n\n 📡 Deploying...\n");
     const gigStatuses = await deploy('GigStatuses');
     await gigStatuses.deployed();
@@ -23,8 +23,6 @@ const main = async () => {
     await distributedTown.deployGenesisCommunities(1);
     await distributedTown.deployGenesisCommunities(2);
     console.log(a);
-    // await distributedTown.deployGenesisCommunities(1);
-    // await distributedTown.deployGenesisCommunities(2);
 
     const coms = await distributedTown.getCommunities();
     console.log(coms);

@@ -31,6 +31,7 @@ contract Community is ICommunity {
     uint256 public scarcityScore;
     uint256[] public skillWalletIds;
     uint256 public tokenId;
+    address[] public memberAddresses;
     mapping(address => bool) public isMember;
 
     address distributedTownAddr;
@@ -105,6 +106,7 @@ contract Community is ICommunity {
         );
 
         skillWalletIds.push(token);
+        memberAddresses.push(newMemberAddress); 
         isMember[newMemberAddress] = true;
         activeMembersCount++;
 
@@ -147,6 +149,10 @@ contract Community is ICommunity {
 
     function getMembers() public view override returns (uint256[] memory) {
         return skillWalletIds;
+    }
+
+    function getMemberAddresses() public view override returns (address[] memory){
+        return memberAddresses;
     }
 
     // TODO: check called only by milestones!
