@@ -25,14 +25,13 @@ interface IGigs is IERC721 {
 
     // in the metadata uri - skills, title, description
     function createGig(
-        address creator,
         uint256 _ditoCredits,
         string memory _metadataUrl
     ) external;
 
-    function takeGig(uint256 _gigId, address taker) external;
+    function takeGig(uint256 _gigId) external;
 
-    function submitGig(uint256 _gigId, address submitter) external;
+    function submitGig(uint256 _gigId) external;
 
-    function completeGig(uint256 _gigId, address completor) external;
+    function completeGig(uint256 _gigId) external;
 }
