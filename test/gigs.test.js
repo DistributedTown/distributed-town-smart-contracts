@@ -46,137 +46,6 @@ contract('Gigs', function ([
     Completed: 3
   }
 
-  async function createGigSuccessfullyFunc(swId, ditoCredits) {
-    let createGigValidationTx = await skillWallet.validate(
-      'signature',
-      swId,
-      Action.CreateGig,
-      ['http://...'],
-      [web3.utils.toWei(new BN(ditoCredits))],
-      [],
-    )
-
-    let validationRequestIdSentEventEmitted =
-      createGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-    assert.isTrue(validationRequestIdSentEventEmitted)
-
-    const requestId = createGigValidationTx.logs[0].args[0]
-    const fulfilTx = await mockOracle.fulfillOracleRequest(
-      requestId,
-      true,
-    )
-    const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-
-    assert.isTrue(fulfilTxEventEmitted)
-
-    const gigId = (await gigs.gigsCount()) - 1
-    const gig = await gigs.gigs(gigId)
-
-    assert.equal(gig.creator, firstMember)
-    assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
-    assert.equal(gig.status, GigStatus.Open)
-    assert.equal(
-      gig.ditoCredits.toString(),
-      web3.utils.toWei(new BN(ditoCredits)).toString(),
-    )
-  }
-  async function createGigFunc(swId, ditoCredits) {
-    let createGigValidationTx = await skillWallet.validate(
-      'signature',
-      swId,
-      Action.CreateGig,
-      ['http://...'],
-      [web3.utils.toWei(new BN(ditoCredits))],
-      [],
-    )
-
-    let validationRequestIdSentEventEmitted =
-      createGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-    assert.isTrue(validationRequestIdSentEventEmitted)
-
-    const requestId = createGigValidationTx.logs[0].args[0]
-    const fulfilTx = await mockOracle.fulfillOracleRequest(
-      requestId,
-      true,
-    )
-    const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-
-    assert.isTrue(fulfilTxEventEmitted)
-  }
-  async function doActionFunc(gigID, user, action) {
-    let takeGigValidationTx = await skillWallet.validate(
-      'signature',
-      user,
-      action,
-      [],
-      [gigID],
-      [],
-    )
-
-    let validationRequestIdSentEventEmitted =
-      takeGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-    assert.isTrue(validationRequestIdSentEventEmitted)
-
-    const requestId = takeGigValidationTx.logs[0].args[0]
-    const fulfilTx = await mockOracle.fulfillOracleRequest(
-      requestId,
-      true,
-    )
-
-    const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-    assert.isTrue(fulfilTxEventEmitted)
-  }
-  async function doActionSuccessfullyFunc(gigID, user, action) {
-    let takeGigValidationTx = await skillWallet.validate(
-      'signature',
-      user,
-      action,
-      [],
-      [gigID],
-      [],
-    )
-
-    let validationRequestIdSentEventEmitted =
-      takeGigValidationTx.logs[1].event === 'ValidationRequestIdSent'
-    assert.isTrue(validationRequestIdSentEventEmitted)
-
-    const requestId = takeGigValidationTx.logs[0].args[0]
-    const fulfilTx = await mockOracle.fulfillOracleRequest(
-      requestId,
-      true,
-    )
-
-    const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-    assert.isTrue(fulfilTxEventEmitted)
-
-    const gig = await gigs.gigs(gigID)
-    const userAddress = await skillWallet.ownerOf(user);
-
-    switch(action) {
-      case(Action.TakeGig): {
-        assert.equal(gig.status, GigStatus.Taken);
-        assert.equal(gig.taker, userAddress);
-        break;
-      }
-      case(Action.SubmitGig): {
-        assert.equal(gig.status, GigStatus.Submitted);
-        assert.equal(gig.taker, userAddress);
-        break;
-      }
-      case(Action.CompleteGig): {
-        assert.equal(gig.status, GigStatus.Completed);
-        assert.equal(gig.creator, userAddress);
-        break;
-      }
-    }
-
-  }
-
-  const doAction = doActionFunc.bind(this);
-  const createGig = createGigFunc.bind(this);
-  const doActionSuccessfully = doActionSuccessfullyFunc.bind(this);
-  const createGigSuccessfully = createGigSuccessfullyFunc.bind(this)
-
   before(async function () {
     this.erc1820 = await singletons.ERC1820Registry(registryFunder)
     gigstatuses = await GigStatuses.new()
@@ -322,110 +191,32 @@ contract('Gigs', function ([
     assert.isFalse(await this.community.isMember(notAMember));
   })
 
-  describe.only('Gigs flow', async function () {
+  describe('Gigs flow', async function () {
     describe('Creating a gig', async function () {
-      it('should fail when called directly', async function () {
-        const tx = gigs.createGig(
-          '0x093ECac1110EF08976A0A1F24393c3e48936489D',
-          web3.utils.toWei(new BN(200)),
-          metadataUrl,
-        )
+      it("should when the member or params are invalid", async function () {
+        await truffleAssert.reverts(
+          gigs.createGig(web3.utils.toWei(new BN(500)), '', { from: notAMember }),
+          "The creator of the gig should be a member of the community."
+        );
 
-        await truffleAssert.reverts(tx, 'Only SWActionExecutor can call this.')
+        await truffleAssert.reverts(
+          gigs.createGig(web3.utils.toWei(new BN(5000)), '', { from: firstMember }),
+          "Invalid credits amount."
+        );
+
+        await truffleAssert.reverts(
+          gigs.createGig(web3.utils.toWei(new BN(2)), '', { from: firstMember }),
+          "Invalid credits amount."
+        );
       })
-      it("should fail when the gig creator isn't a community member", async function () {
-        const currentCount = await gigs.gigsCount();
-        await createGig(this.notAMemberSWId, 60);
-        const afterCreateCallCount = await gigs.gigsCount();
-        assert.equal(currentCount.toString(), afterCreateCallCount.toString());
 
-      })
-      it('should fail when the params are not correct', async function () {
-        const gig = await gigs.gigs(0)
-        assert.equal(gig.creator, '0x0000000000000000000000000000000000000000')
-
-        const validationTx1 = await skillWallet.validate(
-          'signature',
-          3,
-          Action.CreateGig,
-          ['http://...'],
-          [2],
-          [],
-        )
-        const validationRequestIdSentEventEmitted =
-          validationTx1.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted)
-
-        await mockOracle.fulfillOracleRequest(
-          validationTx1.logs[0].args[0],
-          true,
-        )
-
-        const validationTx2 = await skillWallet.validate(
-          'signature',
-          3,
-          Action.CreateGig,
-          ['http://...'],
-          [],
-          [],
-        )
-        const validationRequestIdSentEventEmitted2 =
-          validationTx2.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted2)
-
-        await mockOracle.fulfillOracleRequest(
-          validationTx2.logs[0].args[0],
-          true,
-        )
-        const validationTx3 = await skillWallet.validate(
-          'signature',
-          3,
-          Action.CreateGig,
-          ['http://...'],
-          [2000],
-          [],
-        )
-        const validationRequestIdSentEventEmitted3 =
-          validationTx3.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted3)
-
-        await mockOracle.fulfillOracleRequest(
-          validationTx3.logs[0].args[0],
-          true,
-        )
-        const validationTx4 = await skillWallet.validate(
-          'signature',
-          3,
-          Action.CreateGig,
-          [],
-          [700],
-          [],
-        )
-        const validationRequestIdSentEventEmitted4 =
-          validationTx4.logs[1].event === 'ValidationRequestIdSent'
-        assert.isTrue(validationRequestIdSentEventEmitted4)
-
-        const fulfilTx = await mockOracle.fulfillOracleRequest(
-          validationTx4.logs[0].args[0],
-          true,
-        )
-        const fulfilTxEventEmitted = fulfilTx.logs[0].event === 'CallbackCalled'
-
-        assert.isTrue(fulfilTxEventEmitted)
-
-        const gigAfter = await gigs.gigs(0)
-        assert.equal(
-          gigAfter.creator,
-          '0x0000000000000000000000000000000000000000',
-        )
-      })
       it("should fail when the creator doesn't have enough credits", async function () {
         const creditsHolderBalanceBefore = await this.community.balanceOf(
           this.ditoCreditCommunityHolder,
         )
 
-        await createGigSuccessfully(this.firstMemberSWId, 720)
-        await createGigSuccessfully(this.firstMemberSWId, 720)
+        await gigs.createGig(web3.utils.toWei(new BN(720)), '', { from: firstMember });
+        await gigs.createGig(web3.utils.toWei(new BN(720)), '', { from: firstMember });
 
         const creatorBalance = await this.community.balanceOf(firstMember)
         assert.equal(
@@ -440,227 +231,241 @@ contract('Gigs', function ([
           +web3.utils.fromWei(creditsHolderBalanceBefore.toString()) + 1440,
           +web3.utils.fromWei(creditsHolderBalanceAfter.toString()),
         )
-
-        const gigsCountBefore = await gigs.gigsCount()
-        assert.equal(gigsCountBefore, 2)
-        await createGig(this.firstMemberSWId, 720)
-        const gigsCountAfter = await gigs.gigsCount()
-
-        assert.equal(gigsCountBefore.toString(), gigsCountAfter.toString())
+        await truffleAssert.reverts(
+          gigs.createGig(web3.utils.toWei(new BN(720)), '', { from: firstMember }),
+          "Insufficient dito balance"
+        );
       })
+
       it('should create a gig and transfer the credits correctly', async function () {
-        const balanceBefore = await this.community.balanceOf(firstMember)
-        const balanceCreditsHolderBefore = await this.community.balanceOf(
-          this.ditoCreditCommunityHolder,
-        )
+        const balanceBefore = await this.community.balanceOf(firstMember);
+        const balanceCreditsHolderBefore = await this.community.balanceOf(this.ditoCreditCommunityHolder);
 
-        const creditsAmount = 50
-        await createGigSuccessfully(this.firstMemberSWId, creditsAmount);
+        const creditsAmount = 50;
+        const tx = await gigs.createGig(
+          web3.utils.toWei(new BN(creditsAmount)),
+          metadataUrl,
+          { from: firstMember }
+        );
+        const gigtCreatedEvent = tx.logs[1].event === 'GigCreated'
+        const creator = tx.logs[1].args[0];
+        const gigId = tx.logs[1].args[1];
+        const balanceAfter = await this.community.balanceOf(firstMember);
+        const balanceCreditsHolderAfter = await this.community.balanceOf(this.ditoCreditCommunityHolder);
 
-        const balanceAfter = await this.community.balanceOf(firstMember)
-        const balanceCreditsHolderAfter = await this.community.balanceOf(
-          this.ditoCreditCommunityHolder,
-        )
+        assert.equal(gigtCreatedEvent, true);
+        assert.equal((+web3.utils.fromWei(balanceBefore.toString()) - creditsAmount), +web3.utils.fromWei(balanceAfter.toString()));
+        assert.equal((+web3.utils.fromWei(balanceCreditsHolderBefore.toString()) + creditsAmount), +web3.utils.fromWei(balanceCreditsHolderAfter.toString()));
+        assert.equal(creator.toString(), firstMember);
 
-        assert.equal(
-          +web3.utils.fromWei(balanceBefore.toString()) - creditsAmount,
-          +web3.utils.fromWei(balanceAfter.toString()),
-        )
-        assert.equal(
-          +web3.utils.fromWei(balanceCreditsHolderBefore.toString()) +
-          creditsAmount,
-          +web3.utils.fromWei(balanceCreditsHolderAfter.toString()),
-        )
+        const gig = await gigs.gigs(
+          gigId
+        );
 
-        const gigId = (await gigs.gigsCount()) - 1
-        const gig = await gigs.gigs(gigId)
-
-        assert.equal(gig.creator, firstMember)
-        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
-        assert.equal(gig.status, GigStatus.Open)
-        assert.equal(
-          gig.ditoCredits.toString(),
-          web3.utils.toWei(new BN(50)).toString(),
-        )
-      })
+        assert.equal(gig.creator, firstMember);
+        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000');
+        assert.equal(gig.status, GigStatus.Open);
+        assert.equal(gig.ditoCredits.toString(), web3.utils.toWei(new BN(50)).toString());
+      });
     })
 
     describe('Take a gig', async function () {
-      it('should fail when called directly', async function () {
-        const tx = gigs.takeGig(1, firstMember)
+      it('should fail when the params are wrong', async function () {
+        const createTx = await gigs.createGig(
+          web3.utils.toWei(new BN(50)),
+          metadataUrl,
+          { from: firstMember }
+        );
+        const gigId = createTx.logs[1].args[1];
 
-        await truffleAssert.reverts(tx, 'Only SWActionExecutor can call this.')
-      })
-      it('should fail when the gig creator tries to take the gig', async function () {
-        await createGigSuccessfully(this.firstMemberSWId, 50);
-        const gigID = (await gigs.gigsCount()) - 1
+        await truffleAssert.reverts(
+          gigs.takeGig(gigId, { from: firstMember }),
+          "The creator can't take the gig"
+        );
 
-        await doAction(gigID, this.firstMemberSWId, Action.TakeGig);
+        await truffleAssert.reverts(
+          gigs.takeGig(gigId, { from: notAMember }),
+          "The taker should be a community member."
+        );
 
-        const gig = await gigs.gigs(gigID)
+        await truffleAssert.reverts(
+          gigs.takeGig(120, { from: secondMember }),
+          "Invalid gigId"
+        );
 
-        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
-        assert.equal(gig.creator, firstMember)
-        assert.equal(gig.status, GigStatus.Open);
-      })
-      it("should fail when the gig doesn't exist yet", async function () {
-        const gigID = 120
+        const tx = await gigs.takeGig(
+          gigId,
+          { from: secondMember }
+        );
 
-        await doAction(gigID, this.secondMemberSWId, Action.TakeGig);
+        assert.isTrue(tx.logs[0].event === 'GigTaken');
+        assert.equal(gigId.toString(), tx.logs[0].args[0].toString());
 
-        const gig = await gigs.gigs(gigID)
-
-        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
-        assert.equal(gig.creator, '0x0000000000000000000000000000000000000000')
-      })
-      it("should fail when the taker isn't a community member", async function () {
-        await createGigSuccessfully(this.firstMemberSWId, 60);
-        const gigID = await gigs.gigsCount() - 1;
-
-        await doAction(gigID, this.notAMemberSWId, Action.TakeGig);
-
-        const gig = await gigs.gigs(gigID)
-
-        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
-        assert.equal(gig.creator, firstMember)
-        assert.equal(gig.status, GigStatus.Open);
-
-      })
-      it('should fail when the gig is already taken', async function () {
-        await createGigSuccessfully(this.firstMemberSWId, 50);
-        const gigID = (await gigs.gigsCount()) - 1;
-
-        await doAction(gigID, this.secondMemberSWId, Action.TakeGig);
-
-        const gigBefore = await gigs.gigs(gigID)
-
-        assert.equal(gigBefore.status.toString(), '1');
-        assert.equal(gigBefore.taker, secondMember)
-
-        await doAction(gigID, this.thirdMemberSWId, Action.TakeGig);
-
-        const gigAfter = await gigs.gigs(gigID)
-        assert.equal(gigAfter.status.toString(), '1')
-        assert.equal(gigAfter.taker, secondMember)
-        assert.equal(gigAfter.creator, firstMember)
+        await truffleAssert.reverts(
+          gigs.takeGig(gigId, { from: thirdMember }),
+          "The gig is already taken."
+        );
       })
       it('should succeed taking a gig and should update the state properly', async function () {
-        await createGigSuccessfully(this.firstMemberSWId, 50)
-        const gigID = (await gigs.gigsCount()) - 1;
-        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.TakeGig);
+        const createTx = await gigs.createGig(
+          web3.utils.toWei(new BN(50)),
+          metadataUrl,
+          { from: firstMember }
+        );
+        const gigId = createTx.logs[1].args[1];
+
+        const tx = await gigs.takeGig(
+          gigId,
+          { from: secondMember }
+        );
+
+        const takenGigId = tx.logs[0].args[0];
+
+        assert.equal(gigId.toString(), takenGigId.toString());
+
+        const gig = await gigs.gigs(gigId);
+
+        assert.equal(gig.taker, secondMember);
+        assert.equal(gig.creator, firstMember);
+        assert.equal(gig.status, GigStatus.Taken);
+
       })
     })
 
     describe('Submit a gig', async function () {
-      it('should fail when called directly', async function () {
-        const tx = gigs.submitGig(
-          1,
-          secondMember
-        )
+      it('should fail when the params are wrong', async function () {
+        const createTx = await gigs.createGig(
+          web3.utils.toWei(new BN(50)),
+          metadataUrl,
+          { from: firstMember }
+        );
+        const gigId = createTx.logs[1].args[1];
 
-        await truffleAssert.reverts(tx, 'Only SWActionExecutor can call this.')
-      })
-      it('should fail when the sender is not the taker', async function () {
-        const creditsAmount = 60;
-        await createGigSuccessfully(this.firstMemberSWId, creditsAmount);
-        const gigID = (await gigs.gigsCount()) - 1;
-        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.TakeGig);
+        await truffleAssert.reverts(
+          gigs.submitGig(gigId, { from: firstMember }),
+          "Gig should be with status taken."
+        );
 
-        await doAction(gigID, this.thirdMemberSWId, Action.SubmitGig);
+        await gigs.takeGig(gigId, { from: secondMember });
 
-        const gig = await gigs.gigs(gigID)
+        await truffleAssert.reverts(
+          gigs.submitGig(gigId, { from: thirdMember }),
+          "Only the taker can submit the gig"
+        );
 
-        assert.equal(gig.creator, firstMember)
-        assert.equal(gig.taker, secondMember)
-        assert.equal(gig.status, GigStatus.Taken)
-        assert.equal(
-          gig.ditoCredits.toString(),
-          web3.utils.toWei(new BN(creditsAmount)).toString(),
-        )
-      })
-      it("should fail when the gig doesn't exist yet", async function () {
-        const gigID = 120;
+        await truffleAssert.reverts(
+          gigs.submitGig(gigId, { from: firstMember }),
+          "Only the taker can submit the gig"
+        );
 
-        await doAction(gigID, this.thirdMemberSWId, Action.SubmitGig);
+        await truffleAssert.reverts(
+          gigs.submitGig(120, { from: secondMember }),
+          "Invalid gigId"
+        );
 
-        const gig = await gigs.gigs(gigID)
+        const tx = await gigs.submitGig(
+          gigId,
+          { from: secondMember }
+        );
 
-        assert.equal(gig.creator, '0x0000000000000000000000000000000000000000')
-        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
-      })
-      it("should fail when the gig isn't taken yet", async function () {
+        assert.isTrue(tx.logs[0].event === 'GigSubmitted');
+        assert.equal(gigId.toString(), tx.logs[0].args[0].toString());
 
-        await createGigSuccessfully(this.firstMemberSWId, 60);
-        const gigID = (await gigs.gigsCount()) - 1;
-
-        await doAction(gigID, this.firstMemberSWId, Action.SubmitGig);
-
-        const gigAfter = await gigs.gigs(gigID)
-
-        assert.equal(gigAfter.creator, firstMember)
-        assert.equal(gigAfter.taker, '0x0000000000000000000000000000000000000000')
-        assert.equal(gigAfter.status, GigStatus.Open)
-
+        await truffleAssert.reverts(
+          gigs.submitGig(gigId, { from: secondMember }),
+          "Gig should be with status taken."
+        );
       })
       it('should succeed submitting a gig and should update the state properly', async function () {
-        await createGigSuccessfully(this.firstMemberSWId, 60);
-        const gigID = (await gigs.gigsCount()) - 1;
+        const createTx = await gigs.createGig(
+          web3.utils.toWei(new BN(50)),
+          metadataUrl,
+          { from: firstMember }
+        );
+        const gigId = createTx.logs[1].args[1];
 
-        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.TakeGig);
-        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.SubmitGig);
+        const takeGigtx = await gigs.takeGig(
+          gigId,
+          { from: secondMember }
+        );
 
-        const gig = await gigs.gigs(gigID)
+        const takenGigId = takeGigtx.logs[0].args[0];
 
-        assert.equal(gig.creator, firstMember)
-        assert.equal(gig.taker, secondMember)
-        assert.equal(gig.status, GigStatus.Submitted)
-      })
+        assert.equal(gigId.toString(), takenGigId.toString());
+
+        const gig = await gigs.gigs(gigId);
+
+        assert.equal(gig.taker, secondMember);
+        assert.equal(gig.creator, firstMember);
+        assert.equal(gig.status, GigStatus.Taken);
+
+
+        const submitGigTx = await gigs.submitGig(
+          gigId,
+          { from: secondMember }
+        );
+
+        const submittedGigId = submitGigTx.logs[0].args[0];
+
+        assert.equal(gigId.toString(), submittedGigId.toString());
+
+        const gigSubmitted = await gigs.gigs(gigId);
+
+        assert.equal(gigSubmitted.taker, secondMember);
+        assert.equal(gigSubmitted.creator, firstMember);
+        assert.equal(gigSubmitted.status, GigStatus.Submitted);
+      });
     })
 
     describe('Complete a gig', async function () {
-      it('should fail when called directly', async function () {
-        const tx = gigs.completeGig(
-          1,
-          secondMember
-        )
-        await truffleAssert.reverts(tx, 'Only SWActionExecutor can call this.')
+      it('should fail when the params are wrong', async function () {
+
+        await truffleAssert.reverts(
+          gigs.completeGig(120, { from: secondMember }),
+          "Invalid gigId"
+        );
+
+        const createTx = await gigs.createGig(
+          web3.utils.toWei(new BN(50)),
+          metadataUrl,
+          { from: firstMember }
+        );
+        const gigId = createTx.logs[1].args[1];
+
+        await truffleAssert.reverts(
+          gigs.completeGig(gigId, { from: firstMember }),
+          "Gig status should be Submitted."
+        );
+
+        await gigs.takeGig(gigId, { from: secondMember });
+
+        await truffleAssert.reverts(
+          gigs.completeGig(gigId, { from: firstMember }),
+          "Gig status should be Submitted."
+        );
+
+        await gigs.submitGig(gigId, { from: secondMember });
+
+        await truffleAssert.reverts(
+          gigs.completeGig(gigId, { from: secondMember }),
+          "Can be completed only by the creator."
+        );
+
+        await truffleAssert.reverts(
+          gigs.completeGig(gigId, { from: thirdMember }),
+          "Can be completed only by the creator."
+        );
       })
-
-      it("should fail when the gig doesn't exist yet", async function () {
-        const gigID = 120;
-        await doAction(gigID, this.firstMemberSWId, Action.CompleteGig);
-
-        const gig = await gigs.gigs(gigID);
-        assert.equal(gig.creator, '0x0000000000000000000000000000000000000000')
-        assert.equal(gig.taker, '0x0000000000000000000000000000000000000000')
-      })
-
-      it("should fail when the completor isn't the creator", async function () {
-
-        await createGigSuccessfully(this.firstMemberSWId, 60);
-        const gigID = await gigs.gigsCount() - 1;
-
-        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.TakeGig);
-        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.SubmitGig);
-
-        await doAction(gigID, this.secondMemberSWId, Action.CompleteGig);
-        await doAction(gigID, this.thirdMemberSWId, Action.CompleteGig);
-
-        const gig = await gigs.gigs(gigID)
-
-        assert.equal(gig.creator, firstMember)
-        assert.equal(gig.taker, secondMember)
-        assert.equal(gig.status, GigStatus.Submitted)
-
-      })
-
       it('should complete a gig and transfer the credits accordingly', async function () {
-        const credits = 60;
-        await createGigSuccessfully(this.firstMemberSWId, credits);
-        const gigID = await gigs.gigsCount() - 1;
+        const createTx = await gigs.createGig(
+          web3.utils.toWei(new BN(50)),
+          metadataUrl,
+          { from: firstMember }
+        );
+        const gigId = createTx.logs[1].args[1];
 
-        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.TakeGig);
-        await doActionSuccessfully(gigID, this.secondMemberSWId, Action.SubmitGig);
+        await gigs.takeGig(gigId, { from: secondMember });
+        await gigs.submitGig(gigId, { from: secondMember });
 
         const takerBalanceBeforeComplete = await this.community.balanceOf(
           secondMember,
@@ -670,25 +475,22 @@ contract('Gigs', function ([
           this.ditoCreditCommunityHolder,
         )
 
-        await doActionSuccessfully(gigID, this.firstMemberSWId, Action.CompleteGig);
+        await gigs.completeGig(gigId, { from: firstMember });
 
-        const gig = await gigs.gigs(gigID)
-
-        assert.equal(gig.creator, firstMember)
-        assert.equal(gig.taker, secondMember)
-        assert.equal(gig.status, GigStatus.Completed)
-        assert.equal(
-          gig.ditoCredits.toString(),
-          web3.utils.toWei(new BN(credits)).toString(),
-        )
 
         const takerBalanceAfterComplete = await this.community.balanceOf(
           secondMember,
         )
+
         const ditoHolderBalanceAfterCompletion = await this.community.balanceOf(
           this.ditoCreditCommunityHolder,
         )
 
+        const gig = await gigs.gigs(gigId);
+
+        assert.equal(gig.taker, secondMember);
+        assert.equal(gig.creator, firstMember);
+        assert.equal(gig.status, GigStatus.Completed);
         assert.equal(
           +web3.utils.fromWei(takerBalanceAfterComplete.toString()),
           +web3.utils.fromWei(takerBalanceBeforeComplete.toString()) +
@@ -699,7 +501,7 @@ contract('Gigs', function ([
           +web3.utils.fromWei(ditoHolderBalanceBeforeCompletion.toString()) -
           +web3.utils.fromWei(gig.ditoCredits.toString()),
         )
-      })
+      });
     })
   })
 })

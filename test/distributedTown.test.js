@@ -25,12 +25,8 @@ contract('DistributedTown', function (accounts) {
     });
     describe('Deploy Genesis Communities', async function () {
         it("create genesis community", async function () {
-
             const tx = await this.distirbutedTown.deployGenesisCommunities(0, { from: accounts[2] });
-            console.log(tx);
-            const comCreated = tx.logs[1].event === 'CommunityCreated';
-            console.log(tx.logs[0]);
-
+            const comCreated = tx.logs[3].event === 'CommunityCreated';
             assert.isTrue(comCreated);
         });
     });
