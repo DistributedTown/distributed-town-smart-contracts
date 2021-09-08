@@ -34,6 +34,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
     mapping(address => uint) public communityAddressToTokenID;
     mapping(uint => uint) public communityToTemplate;
     mapping(address => address) public ownerToCommunity;
+    mapping(address => bool) public isDiToNativeCommunity;
     address[] public communities;
     address public projectsAddress;
     address public skillWalletAddress;
@@ -61,6 +62,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         address owner
     ) public override {
         uint membersCount = 24;
+        bool isDiToNative = false;
         if (msg.sender != partnersRegistryAddress) {
             ISkillWallet skillWallet = ISkillWallet(skillWalletAddress);
             bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
@@ -73,6 +75,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
             require(isActive, "SW not active.");
             membersCount = totalMembersAllowed;
             owner = msg.sender;
+            isDiToNative = true;
         }
 
         // TODO: add check for validated skills;
@@ -87,6 +90,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
         ownerToCommunity[owner] = comAddr;
+        isDiToNativeCommunity[comAddr] = isDiToNative;
         communities.push(comAddr);
 
         //TODO: add the creator as a community member
@@ -119,8 +123,8 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         override
         onlyOwner
     {
-        require(communityTokenIds.current() < 3, "asdasdasd");
-        require(template >= 0 && template <= 2, "adasdasdasdsa");
+        require(communityTokenIds.current() < 3, "Only the first 3 communities can be deployed as Genesis ones.");
+        require(template >= 0 && template <= 2, "Invalid templateID.");
         string[3] memory metadata = [
             "https://hub.textile.io/ipfs/bafkreick7p4yms7cmwnmfizmcl5e6cdpij4jsl2pkhk5cejn744uwnziny",
             "https://hub.textile.io/ipfs/bafkreid7jtzhuedeggn5welup7iyxchpqodbyam3yfnt4ey4xwnusr3vbe",
