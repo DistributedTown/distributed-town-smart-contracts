@@ -259,46 +259,22 @@ contract('Gigs', function ([
     const gigsAddr = await this.community.gigsAddr()
     gigs = await Gigs.at(gigsAddr)
     await this.community.joinNewMember(
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
       'http://someuri.co',
       web3.utils.toWei(new BN(2006)),
       { from: firstMember },
     )
     await this.community.joinNewMember(
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
       'http://someuri.co',
       web3.utils.toWei(new BN(2006)),
       { from: secondMember },
     )
     await this.community.joinNewMember(
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
       'http://someuri.co',
       web3.utils.toWei(new BN(2006)),
       { from: thirdMember },
     )
 
     await this.secondCommunity.joinNewMember(
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
       'http://someuri.co',
       web3.utils.toWei(new BN(2006)),
       { from: notAMember },
