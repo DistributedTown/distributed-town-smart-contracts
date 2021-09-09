@@ -3,6 +3,7 @@ pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
 import "skill-wallet/contracts/main/ISkillWallet.sol";
+import "skill-wallet/contracts/mocks/MockOracle.sol";
 
 import "./ICommunity.sol";
 import "./Treasury.sol";
@@ -11,7 +12,6 @@ import "./DITOCredit.sol";
 import "./DITOCreditFactory.sol";
 import "../gigs/Gigs.sol";
 import "../gigs/GigsFactory.sol";
-// import "../CommonTypes.sol";
 import "../DistributedTown.sol";
 import "../projects/Projects.sol";
 import "../AddressProvider.sol";
@@ -40,62 +40,61 @@ contract Community is ICommunity {
     address public gigsAddr;
     address public ditoCreditsHolder;
     uint256[] projectIds;
-    uint totalMembersAllowed;
+    uint256 totalMembersAllowed;
+    bool claimableSkillWallets;
 
     // add JSON Schema base URL
-    constructor(string memory _url, address _addrProvider, uint _totalMembersAllowed) public {
+    constructor(
+        string memory _url,
+        address _addrProvider,
+        uint256 _totalMembersAllowed,
+        bool _claimableSkillWallets
+    ) public {
         metadataUri = _url;
         distributedTownAddr = msg.sender;
 
         AddressProvider provider = AddressProvider(_addrProvider);
         ditoCreditsHolder = address(new DiToCreditCommunityHolder());
-        DiToCreditsFactory creditsFactory =
-            DiToCreditsFactory(provider.ditoTokenFactory());
+        DiToCreditsFactory creditsFactory = DiToCreditsFactory(
+            provider.ditoTokenFactory()
+        );
         ditoCreditsAddr = creditsFactory.deploy(ditoCreditsHolder);
         treasuryAddr = TreasuryFactory(provider.treasuryFactory()).deploy(
             ditoCreditsAddr
         );
         gigsAddr = GigsFactory(provider.gigsFactory()).deploy();
         totalMembersAllowed = _totalMembersAllowed;
-        joinNewMember(0, 0, 0, 0, 0, 0, _url, 2000 * 1e18);
+        claimableSkillWallets = _claimableSkillWallets;
+        joinNewMember(_url, 2000 * 1e18);
     }
 
     // check if it's called only from deployer.
-    function joinNewMember(
-        uint64 displayStringId1,
-        uint8 level1,
-        uint64 displayStringId2,
-        uint8 level2,
-        uint64 displayStringId3,
-        uint8 level3,
-        string memory uri,
-        uint256 credits
-    ) public override {
+    function joinNewMember(string memory uri, uint256 credits) public override {
         require(
             activeMembersCount <= totalMembersAllowed,
             "No free spots left!"
         );
+        
         require(!isMember[msg.sender], "Already a member");
 
         // the DiTo contract can only join the treasury as a member of the community
-        address newMemberAddress =
-            msg.sender == distributedTownAddr ? treasuryAddr : msg.sender;
+        address newMemberAddress = msg.sender == distributedTownAddr
+            ? treasuryAddr
+            : msg.sender;
 
-        Types.SkillSet memory skillSet =
-            Types.SkillSet(
-                Types.Skill(displayStringId1, level1),
-                Types.Skill(displayStringId2, level2),
-                Types.Skill(displayStringId3, level3)
-            );
+        ISkillWallet skillWallet = ISkillWallet(
+            DistributedTown(distributedTownAddr).skillWalletAddress()
+        );
 
-        ISkillWallet skillWallet =
-            ISkillWallet(
-                DistributedTown(distributedTownAddr).skillWalletAddress()
-            );
-        skillWallet.create(newMemberAddress, skillSet, uri);
-        uint256 token = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
+        bool claimableSW = address(this) == msg.sender ? false : claimableSkillWallets;
+        skillWallet.create(newMemberAddress, uri, claimableSW);
 
-        // get the skills from chainlink
+        uint256 token = 0;
+        if (claimableSkillWallets)
+            token = skillWallet.getClaimableSkillWalletId(newMemberAddress);
+        else 
+            token = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
+
         DITOCredit(ditoCreditsAddr).addToWhitelist(newMemberAddress);
         DITOCredit(ditoCreditsAddr).operatorSend(
             ditoCreditsHolder,
@@ -106,7 +105,7 @@ contract Community is ICommunity {
         );
 
         skillWalletIds.push(token);
-        memberAddresses.push(newMemberAddress); 
+        memberAddresses.push(newMemberAddress);
         isMember[newMemberAddress] = true;
         activeMembersCount++;
 
@@ -119,10 +118,9 @@ contract Community is ICommunity {
             "No free spots left!"
         );
 
-        ISkillWallet skillWallet =
-            ISkillWallet(
-                DistributedTown(distributedTownAddr).skillWalletAddress()
-            );
+        ISkillWallet skillWallet = ISkillWallet(
+            DistributedTown(distributedTownAddr).skillWalletAddress()
+        );
         address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
 
         require(!isMember[skillWalletAddress], "You have already joined!");
@@ -151,7 +149,12 @@ contract Community is ICommunity {
         return skillWalletIds;
     }
 
-    function getMemberAddresses() public view override returns (address[] memory){
+    function getMemberAddresses()
+        public
+        view
+        override
+        returns (address[] memory)
+    {
         return memberAddresses;
     }
 
@@ -189,20 +192,16 @@ contract Community is ICommunity {
     }
 
     function getTokenId() public view override returns (uint256) {
-        uint256 token =
-            DistributedTown(distributedTownAddr).communityAddressToTokenID(
-                address(this)
-            );
+        uint256 token = DistributedTown(distributedTownAddr)
+            .communityAddressToTokenID(address(this));
         return token;
     }
 
     function getTemplate() public view override returns (uint256) {
-        uint256 token =
-            DistributedTown(distributedTownAddr).communityAddressToTokenID(
-                address(this)
-            );
-        uint256 templateId =
-            DistributedTown(distributedTownAddr).communityToTemplate(token);
+        uint256 token = DistributedTown(distributedTownAddr)
+            .communityAddressToTokenID(address(this));
+        uint256 templateId = DistributedTown(distributedTownAddr)
+            .communityToTemplate(token);
         return templateId;
     }
 
@@ -233,12 +232,13 @@ contract Community is ICommunity {
         override
         returns (address)
     {
-        Projects projects =
-            Projects(DistributedTown(distributedTownAddr).projectsAddress());
+        Projects projects = Projects(
+            DistributedTown(distributedTownAddr).projectsAddress()
+        );
         return projects.getProjectTreasuryAddress(projectId);
     }
 
-    function getSkillWalletAddress() public override returns(address) {
+    function getSkillWalletAddress() public override returns (address) {
         return DistributedTown(distributedTownAddr).skillWalletAddress();
     }
 }

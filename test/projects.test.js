@@ -46,17 +46,12 @@ contract('Projects', function ([_, registryFunder, creator, member]) {
     const gigsAddr = await this.community.gigsAddr()
     this.projects = await Projects.new(this.skillWallet.address)
     const tx = await this.community.joinNewMember(
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
       'http://someuri.co',
       web3.utils.toWei(new BN(2006)),
       { from: member },
     )
     tokenId = tx.logs[0].args[1]
+    await this.skillWallet.claim({from: member})
     await this.skillWallet.addPubKeyToSkillWallet(tokenId, 'pubKey', {
       from: creator,
     })

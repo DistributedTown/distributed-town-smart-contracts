@@ -128,54 +128,37 @@ contract('Gigs', function ([
     const gigsAddr = await this.community.gigsAddr()
     gigs = await Gigs.at(gigsAddr)
     await this.community.joinNewMember(
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
       'http://someuri.co',
       web3.utils.toWei(new BN(2006)),
       { from: firstMember },
     )
     await this.community.joinNewMember(
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
       'http://someuri.co',
       web3.utils.toWei(new BN(2006)),
       { from: secondMember },
     )
     await this.community.joinNewMember(
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
       'http://someuri.co',
       web3.utils.toWei(new BN(2006)),
       { from: thirdMember },
     )
 
     await this.secondCommunity.joinNewMember(
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
       'http://someuri.co',
       web3.utils.toWei(new BN(2006)),
       { from: notAMember },
     )
+
+    await skillWallet.claim({ from: firstMember });
+    await skillWallet.claim({ from: secondMember });
+    await skillWallet.claim({ from: thirdMember });
+    await skillWallet.claim({ from: notAMember });
+
     await activateSkillWallet(firstMember)
     await activateSkillWallet(secondMember)
     await activateSkillWallet(thirdMember)
     await activateSkillWallet(notAMember)
+    
     this.firstMemberSWId = await skillWallet.getSkillWalletIdByOwner(firstMember);
     this.secondMemberSWId = await skillWallet.getSkillWalletIdByOwner(secondMember);
     this.thirdMemberSWId = await skillWallet.getSkillWalletIdByOwner(thirdMember);

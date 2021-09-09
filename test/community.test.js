@@ -30,14 +30,14 @@ contract('Community', function (accounts) {
         this.ditoCreditCommunityHolder = await this.community.ditoCreditsHolder();
         const gigsAddr = await this.community.gigsAddr();
         this.gigs = await Gigs.at(gigsAddr);
-        const tx = await this.community.joinNewMember(1, 1, 2, 2, 3, 3, 'http://someuri.co', web3.utils.toWei(new BN(2006)), { from: accounts[3] });
+        const tx = await this.community.joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)), { from: accounts[3] });
         memberAddress = accounts[3];
     });
     describe('Join new member', async function () {
 
         it("should fail if the user is already a part of the community", async function () {
 
-            const tx = this.community.joinNewMember(1, 1, 2, 2, 3, 3, 'http://someuri.co', web3.utils.toWei(new BN(2006)), { from: memberAddress });
+            const tx = this.community.joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)), { from: memberAddress });
 
             await truffleAssert.reverts(
                 tx,
@@ -45,19 +45,20 @@ contract('Community', function (accounts) {
             );
         });
         it("should fail if the user is a member of another community", async function () {
-            const tx = this.community2.joinNewMember(1, 1, 2, 2, 3, 3, 'http://someuri.co', web3.utils.toWei(new BN(2006)), { from: memberAddress });
+            const tx = this.community2.joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)), { from: memberAddress });
             await truffleAssert.reverts(
                 tx,
-                "There is SkillWallet already registered for this address."
+                "There is SkillWallet to be claimed by this address."
             );
         });
         it("should transfer credits correctly", async function () {
-
             const userAddress = accounts[6];
             const creditsHolderBalanceBefore = await this.community.balanceOf(this.ditoCreditCommunityHolder);
-            const tx = await this.community.joinNewMember(1, 1, 2, 2, 3, 3, 'http://someuri.co', web3.utils.toWei(new BN(3000)), { from: accounts[6] });
+            const tx = await this.community.joinNewMember('http://someuri.co', web3.utils.toWei(new BN(3000)), { from: accounts[6] });
             const memberAddedEvent = tx.logs[0].event === 'MemberAdded';
             assert.equal(memberAddedEvent, true);
+
+            await this.skillWallet.claim({ from: accounts[6]});
 
             const memberBalance = await this.community.balanceOf(userAddress);
             assert.equal(memberBalance.toString(), web3.utils.toWei(new BN(3000)).toString());
@@ -74,15 +75,12 @@ contract('Community', function (accounts) {
             const skillWalletId = await this.skillWallet.getSkillWalletIdByOwner(userAddress);
             const skillWalletActiveCommunity = await this.skillWallet.getActiveCommunity(tokenId);
             const skillWalletCommunityHistory = await this.skillWallet.getCommunityHistory(tokenId);
-            const skillWalletSkillSet = await this.skillWallet.getSkillSet(tokenId);
             const skillWalletActivated = await this.skillWallet.isSkillWalletActivated(tokenId);
 
             assert.equal(skillWalletRegistered, true);
             assert.equal(skillWalletId.toString(), tokenId.toString());
             assert.equal(skillWalletActiveCommunity, this.community.address);
             assert.equal(skillWalletActivated, false);
-            assert.equal(skillWalletSkillSet['skill2']['displayStringId'].toString(), '2');
-            assert.equal(skillWalletSkillSet['skill2']['level'].toString(), '2');
             assert.equal(skillWalletCommunityHistory[0], this.community.address);
             assert.equal(membersCount.toString(), '3');
             assert.equal(isMember, true);

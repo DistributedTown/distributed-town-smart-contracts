@@ -85,7 +85,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         uint newItemId = communityTokenIds.current();
 
         address comAddr = address(
-            new Community(communityMetadata, addressProvider, membersCount)
+            new Community(communityMetadata, addressProvider, membersCount, false)
         );
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
@@ -135,13 +135,15 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         Community community = new Community(
             metadata[template],
             addressProvider,
-            24
+            24,
+            true
         );
         address comAddr = address(community);
 
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = 0;
         communities.push(comAddr);
+        isDiToNativeCommunity[comAddr] = true;
         communityTokenIds.increment();
 
         emit CommunityCreated(address(0), newItemId, 2, msg.sender);
