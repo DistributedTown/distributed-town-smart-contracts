@@ -1,7 +1,6 @@
-const { expectEvent, singletons, constants } = require('@openzeppelin/test-helpers');
+const { singletons } = require('@openzeppelin/test-helpers');
 const { assert } = require('chai');
-const { ZERO_ADDRESS } = constants;
-const truffleAssert = require('truffle-assertions');
+const { upgrades, ethers } = require('hardhat');
 
 const GigStatuses = artifacts.require('GigStatuses');
 const DistributedTown = artifacts.require('DistributedTown');
@@ -21,9 +20,14 @@ contract('DistributedTown', function (accounts) {
         this.addressProvder = await AddressProvider.new();
 
         this.skillWallet = await SkillWallet.new('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876', { from: accounts[2] });
-        this.distirbutedTown = await DistributedTown.new('http://someurl.co', this.skillWallet.address, this.addressProvder.address, { from: accounts[2] });
+        
+        this.distirbutedTown =  await upgrades.deployProxy(
+          DistributedTown,
+          ['http://someurl.co', this.skillWallet.address, this.addressProvder.address, this.addressProvder.address],
+          { from: accounts[2] }
+        );
     });
-    describe('Deploy Genesis Communities', async function () {
+    describe.only('Deploy Genesis Communities', async function () {
         it("create genesis community", async function () {
             const tx = await this.distirbutedTown.deployGenesisCommunities(0, { from: accounts[2] });
             const comCreated = tx.logs[3].event === 'CommunityCreated';

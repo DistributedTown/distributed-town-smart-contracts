@@ -2,14 +2,13 @@
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155HolderUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "skill-wallet/contracts/main/ISkillWallet.sol";
 
-import "./projects/Projects.sol";
 import "./community/Community.sol";
 import "./IDistributedTown.sol";
 
@@ -20,16 +19,16 @@ import "./IDistributedTown.sol";
  * @author DistributedTown
  */
 
-contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
+contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistributedTown, OwnableUpgradeable {
     event CommunityCreated(
         address communityContract,
         uint communityId,
         uint template,
         address indexed creator
     );
-    using Counters for Counters.Counter;
+    using CountersUpgradeable for CountersUpgradeable.Counter;
 
-    Counters.Counter private communityTokenIds;
+    CountersUpgradeable.Counter private communityTokenIds;
 
     mapping(address => uint) public communityAddressToTokenID;
     mapping(uint => uint) public communityToTemplate;
@@ -43,15 +42,17 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
     address partnersRegistryAddress;
 
     // TODO Add JSON Schema base URL
-    constructor(
-        string memory _url,
+    function initialize(
+         string memory _url,
         address _skillWalletAddress,
-        address _addrProvider
-    ) public ERC1155(_url) {
-        // initialize pos values of the 3 templates;
+        address _addrProvider,
+        address _projectsAddress
+    ) public initializer {
+        __Ownable_init();
+        __ERC1155_init(_url);
+        
         skillWalletAddress = _skillWalletAddress;
-        Projects projects = new Projects(_skillWalletAddress);
-        projectsAddress = address(projects);
+        projectsAddress = _projectsAddress;
         addressProvider = _addrProvider;
     }
 
@@ -121,7 +122,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
     function deployGenesisCommunities(uint template)
         public
         override
-        onlyOwner
+       onlyOwner
     {
         require(communityTokenIds.current() < 3, "Only the first 3 communities can be deployed as Genesis ones.");
         require(template >= 0 && template <= 2, "Invalid templateID.");

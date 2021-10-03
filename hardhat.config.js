@@ -8,6 +8,7 @@ require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly")
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-truffle5");
+require('@openzeppelin/hardhat-upgrades');
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
@@ -69,6 +70,8 @@ module.exports = {
     maticTestnet: {
       url: 'https://rpc-mumbai.maticvigil.com/',
       gasPrice: 1000000000,
+      gasPrice: 8000000000,
+      gas: 2100000,
       accounts: {
         mnemonic: mnemonic(),
       }
