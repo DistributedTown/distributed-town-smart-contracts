@@ -45,11 +45,6 @@ interface ICommunity {
     // Called only by project (or create project from Community.sol (better))
     function addProjectId(uint256 projectId) external;
 
-    function getProjectTreasuryAddress(uint256 projectId)
-        external
-        view
-        returns (address);
-
     function balanceOf(address member) external view returns (uint256);
 
     function transferCredits(address to, uint256 amount) external;

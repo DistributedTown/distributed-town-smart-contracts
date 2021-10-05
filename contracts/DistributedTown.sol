@@ -35,7 +35,6 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
     mapping(address => address) public ownerToCommunity;
     mapping(address => bool) public isDiToNativeCommunity;
     address[] public communities;
-    address public projectsAddress;
     address public skillWalletAddress;
     address public communityFactoryAddress;
     address addressProvider;
@@ -45,14 +44,12 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
     function initialize(
          string memory _url,
         address _skillWalletAddress,
-        address _addrProvider,
-        address _projectsAddress
+        address _addrProvider
     ) public initializer {
         __Ownable_init();
         __ERC1155_init(_url);
         
         skillWalletAddress = _skillWalletAddress;
-        projectsAddress = _projectsAddress;
         addressProvider = _addrProvider;
     }
 
@@ -139,14 +136,16 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
             24,
             true
         );
+
+        require(address(community) != address(0), "Community Creation failed");
         address comAddr = address(community);
 
         communityAddressToTokenID[comAddr] = newItemId;
-        communityToTemplate[newItemId] = 0;
+        communityToTemplate[newItemId] = template;
         communities.push(comAddr);
         isDiToNativeCommunity[comAddr] = true;
         communityTokenIds.increment();
 
-        emit CommunityCreated(address(0), newItemId, 2, msg.sender);
+        emit CommunityCreated(address(0), 1, 2, msg.sender);
     }
 }

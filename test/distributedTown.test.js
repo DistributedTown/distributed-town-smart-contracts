@@ -1,37 +1,103 @@
 const { singletons } = require('@openzeppelin/test-helpers');
 const { assert } = require('chai');
 const { upgrades, ethers } = require('hardhat');
+const truffleAssert = require('truffle-assertions')
 
-const GigStatuses = artifacts.require('GigStatuses');
-const DistributedTown = artifacts.require('DistributedTown');
-const Community = artifacts.require('Community');
-const SkillWallet = artifacts.require('skill-wallet/contracts/main/SkillWallet');
-const Gigs = artifacts.require('Gigs');
-const AddressProvider = artifacts.require('AddressProvider');
 const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
 var BN = web3.utils.BN;
 
-contract('DistributedTown', function (accounts) {
+let erc1820;
+let skillWallet;
+let distributedTown;
 
-    before(async function () {
-        this.erc1820 = await singletons.ERC1820Registry(accounts[1]);
-        this.gigStatuses = await GigStatuses.new();
-        AddressProvider.link(this.gigStatuses);
-        this.addressProvder = await AddressProvider.new();
+contract('DistributedTown', function (
+    
+) {
+    beforeEach(async function () {
 
-        this.skillWallet = await SkillWallet.new('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876', { from: accounts[2] });
-        
-        this.distirbutedTown =  await upgrades.deployProxy(
-          DistributedTown,
-          ['http://someurl.co', this.skillWallet.address, this.addressProvder.address, this.addressProvder.address],
-          { from: accounts[2] }
+        [deployer, ...accounts] = await ethers.getSigners();
+        const GigStatuses = await ethers.getContractFactory("GigStatuses");
+        const DistributedTown = await ethers.getContractFactory("DistributedTown");
+        const SkillWallet = await ethers.getContractFactory('SkillWallet');
+
+        erc1820 = await singletons.ERC1820Registry(deployer.address);
+        const gigStatuses = await GigStatuses.deploy();
+        await gigStatuses.deployed();
+
+        const AddressProvider = await ethers.getContractFactory('AddressProvider', {
+            libraries: {
+                GigStatuses: gigStatuses.address
+            }
+        });
+
+        const addressProvder = await AddressProvider.deploy();
+        await addressProvder.deployed();
+
+        skillWallet = await SkillWallet.deploy('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876');
+        await skillWallet.deployed();
+
+        distributedTown = await upgrades.deployProxy(
+            DistributedTown,
+            ['http://someurl.co', skillWallet.address, addressProvder.address]
         );
+
+        await distributedTown.deployed();
     });
-    describe.only('Deploy Genesis Communities', async function () {
+
+    describe('Deploy Genesis Communities', async function () {
         it("create genesis community", async function () {
-            const tx = await this.distirbutedTown.deployGenesisCommunities(0, { from: accounts[2] });
-            const comCreated = tx.logs[3].event === 'CommunityCreated';
-            assert.isTrue(comCreated);
+            const tx0 = await (await distributedTown.connect(deployer).deployGenesisCommunities(0)).wait();
+            const comCreated0 = tx0.events.find(e => e.event == 'CommunityCreated');
+
+            const tx1 = await (await distributedTown.connect(deployer).deployGenesisCommunities(1)).wait();
+            const comCreated1 = tx1.events.find(e => e.event == 'CommunityCreated');
+
+            const tx2 = await (await distributedTown.connect(deployer).deployGenesisCommunities(2)).wait();
+            const comCreated2 = tx2.events.find(e => e.event == 'CommunityCreated');
+
+            assert.isNotNull(comCreated0)
+            assert.isNotNull(comCreated1)
+            assert.isNotNull(comCreated2)
+        });
+
+        it("should fail deploying genesis communities if doesn't called by deployer", async function () {
+            const failingTx = distributedTown.connect(accounts[2]).deployGenesisCommunities(0);
+            await truffleAssert.reverts(
+                failingTx,
+                'Ownable: caller is not the owner',
+              )
+        });
+
+
+        it("should fail deploying genesis community with invalid template", async function () {
+            const failingTx = distributedTown.connect(deployer).deployGenesisCommunities(5);
+            await truffleAssert.reverts(
+                failingTx,
+                'Invalid templateID',
+              )
+        });
+
+
+        it("should fail deploying 4th genesis community", async function () {
+           
+            const tx0 = await (await distributedTown.connect(deployer).deployGenesisCommunities(0)).wait();
+            const comCreated0 = tx0.events.find(e => e.event == 'CommunityCreated');
+
+            const tx1 = await (await distributedTown.connect(deployer).deployGenesisCommunities(1)).wait();
+            const comCreated1 = tx1.events.find(e => e.event == 'CommunityCreated');
+
+            const tx2 = await (await distributedTown.connect(deployer).deployGenesisCommunities(2)).wait();
+            const comCreated2 = tx2.events.find(e => e.event == 'CommunityCreated');
+
+            assert.isNotNull(comCreated0)
+            assert.isNotNull(comCreated1)
+            assert.isNotNull(comCreated2)
+
+            const failingTx = distributedTown.connect(deployer).deployGenesisCommunities(0);
+            await truffleAssert.reverts(
+                failingTx,
+                'Only the first 3 communities can be deployed as Genesis ones',
+              )
         });
     });
 });

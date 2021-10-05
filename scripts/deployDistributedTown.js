@@ -6,33 +6,31 @@ const { deploy } = require("./utils")
 
 const main = async () => {
     console.log("\n\n 📡 Deploying...\n");
-    // const GigStatuses = await ethers.getContractFactory('GigStatuses');
-    // const gigStatuses = await GigStatuses.deploy();
-    // await gigStatuses.deployed();
-    // console.log('gigStatusesAddress', gigStatuses.address)
-    // const skillWalletAddress = '0xF89424a725298737086812173f0Dc7DfD221Dc60';
+    const GigStatuses = await ethers.getContractFactory('GigStatuses');
+    const gigStatuses = await GigStatuses.deploy();
+    await gigStatuses.deployed();
+    console.log('gigStatusesAddress', gigStatuses.address)
+    const skillWalletAddress = '0xF89424a725298737086812173f0Dc7DfD221Dc60';
 
-    // const addressProvider = await deploy('AddressProvider', [], {},
-    //     {
-    //         GigStatuses: gigStatuses.address
-    //     });
-    // await addressProvider.deployed();
+    const addressProvider = await deploy('AddressProvider', [], {},
+        {
+            GigStatuses: gigStatuses.address
+        });
+    await addressProvider.deployed();
 
     const DistributedTown = await ethers.getContractFactory('DistributedTown');
 
-    // const distributedTown = await upgrades.deployProxy(DistributedTown, [
-    //     'http://someurl.io', 
-    //     skillWalletAddress, 
-    //     addressProvider.address,
-    //     ethers.constants.AddressZero
-    // ]);
-    // await distributedTown.deployed();
-
-    const distributedTown = DistributedTown.attach('0x475E6a3784b073f7a74193371c3A6b2bcA51c85e');
+    const distributedTown = await upgrades.deployProxy(DistributedTown, [
+        'http://someurl.io', 
+        skillWalletAddress, 
+        addressProvider.address
+    ]);
+    await distributedTown.deployed();
 
     const a = await distributedTown.deployGenesisCommunities(0);
     // await distributedTown.deployGenesisCommunities(1);
     // await distributedTown.deployGenesisCommunities(2);
+    console.log(await a.wait());
     console.log(a);
 
     const coms = await distributedTown.getCommunities();

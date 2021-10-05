@@ -68,10 +68,9 @@ module.exports = {
       }
     },
     maticTestnet: {
-      url: 'https://rpc-mumbai.maticvigil.com/',
-      gasPrice: 1000000000,
-      gasPrice: 8000000000,
-      gas: 2100000,
+      url: 'https://matic-mumbai.chainstacklabs.com',
+      gasPrice: 'auto',
+      gas: 'auto',
       accounts: {
         mnemonic: mnemonic(),
       }
