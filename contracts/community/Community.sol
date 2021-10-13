@@ -57,6 +57,7 @@ contract Community is ICommunity {
 
     // add JSON Schema base URL
     constructor(
+        address _distributedTownAddr,
         string memory _url,
         address _addrProvider,
         uint256 _totalMembersAllowed,
@@ -65,7 +66,7 @@ contract Community is ICommunity {
     ) public {
         if (_migrateFrom == address(0)) {
             metadataUri = _url;
-            distributedTownAddr = msg.sender;
+            distributedTownAddr = _distributedTownAddr;
 
             AddressProvider provider = AddressProvider(_addrProvider);
             ditoCreditsHolder = address(new DiToCreditCommunityHolder());
@@ -101,7 +102,7 @@ contract Community is ICommunity {
     }
 
     function migrateData() public {
-        require(status == STATUS.IN_PROGRESS, "Migration si not in progress");
+        require(status == STATUS.IN_PROGRESS, "Migration is not in progress");
 
         Community currentCommunity = Community(migratedFrom);
         require(currentCommunity.status() == STATUS.MIGRATED, "Community not migrated");

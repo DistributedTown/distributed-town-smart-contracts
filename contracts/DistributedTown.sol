@@ -11,6 +11,7 @@ import "skill-wallet/contracts/main/ISkillWallet.sol";
 
 import "./projects/Projects.sol";
 import "./community/Community.sol";
+import "./community/CommunityFactory.sol";
 import "./IDistributedTown.sol";
 
 /**
@@ -46,13 +47,15 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
     constructor(
         string memory _url,
         address _skillWalletAddress,
-        address _addrProvider
+        address _addrProvider,
+        address _communityFactory
     ) public ERC1155(_url) {
         // initialize pos values of the 3 templates;
         skillWalletAddress = _skillWalletAddress;
         Projects projects = new Projects(_skillWalletAddress);
         projectsAddress = address(projects);
         addressProvider = _addrProvider;
+        communityFactoryAddress = _communityFactory;
     }
 
     function createCommunity(
@@ -84,9 +87,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         communityTokenIds.increment();
         uint newItemId = communityTokenIds.current();
 
-        address comAddr = address(
-            new Community(communityMetadata, addressProvider, membersCount, false, address(0))
-        );
+        address comAddr = CommunityFactory(communityFactoryAddress).createCommunity(communityMetadata, addressProvider, membersCount, false, address(0));
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
         ownerToCommunity[owner] = comAddr;
@@ -100,9 +101,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
     function migrateCommunity(address _community) public {
         require(ownerToCommunity[msg.sender] == _community, "Not community owner");
 
-        address newComAddr = address(
-            new Community("", address(0), 0, false, _community)
-        );
+        address newComAddr = CommunityFactory(communityFactoryAddress).createCommunity("", address(0), 0, false, _community);
 
         Community(_community).markAsMigrated(newComAddr);
         Community(newComAddr).migrateData();
@@ -151,14 +150,13 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         ];
         uint newItemId = communityTokenIds.current();
         _mint(address(this), template, 1, "");
-        Community community = new Community(
+        address comAddr =  CommunityFactory(communityFactoryAddress).createCommunity(
             metadata[template],
             addressProvider,
             24,
             true,
             address(0)
         );
-        address comAddr = address(community);
 
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = 0;
