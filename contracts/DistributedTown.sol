@@ -85,7 +85,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         uint newItemId = communityTokenIds.current();
 
         address comAddr = address(
-            new Community(communityMetadata, addressProvider, membersCount, false)
+            new Community(communityMetadata, addressProvider, membersCount, false, address(0))
         );
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
@@ -95,6 +95,25 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
 
         //TODO: add the creator as a community member
         emit CommunityCreated(comAddr, newItemId, template, owner);
+    }
+
+    function migrateCommunity(address _community) public {
+        require(ownerToCommunity[msg.sender] == _community, "Not community owner");
+
+        address newComAddr = address(
+            new Community("", address(0), 0, false, _community)
+        );
+
+        Community(_community).markAsMigrated(newComAddr);
+        Community(newComAddr).migrateData();
+
+        uint256 comId = communityAddressToTokenID[_community];
+        communities[comId] = newComAddr;
+        delete communityAddressToTokenID[_community];
+        communityAddressToTokenID[newComAddr] = comId;
+        ownerToCommunity[msg.sender] = newComAddr;
+        isDiToNativeCommunity[newComAddr] = isDiToNativeCommunity[_community];
+        delete isDiToNativeCommunity[_community];
     }
 
     function setPartnersRegistryAddress(address _partnersRegistryAddress)
@@ -136,7 +155,8 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
             metadata[template],
             addressProvider,
             24,
-            true
+            true,
+            address(0)
         );
         address comAddr = address(community);
 
