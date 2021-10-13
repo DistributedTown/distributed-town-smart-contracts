@@ -5,6 +5,7 @@ const truffleAssert = require('truffle-assertions')
 const GigStatuses = artifacts.require('GigStatuses')
 const DistributedTown = artifacts.require('DistributedTown')
 const Community = artifacts.require('Community')
+const CommunityFactory = artifacts.require('CommunityFactory');
 
 const MockOracle = artifacts.require('skill-wallet/contracts/mocks/MockOracle')
 const LinkToken = artifacts.require('skill-wallet/contracts/mocks/LinkToken')
@@ -113,10 +114,12 @@ contract('Gigs', function ([
     )
 
     this.addressProvder = await AddressProvider.new()
+    this.communityFactory = await CommunityFactory.new();
     this.distirbutedTown = await DistributedTown.new(
       'http://someurl.co',
       skillWallet.address,
       this.addressProvder.address,
+      this.communityFactory.address,
       { from: creator },
     )
     await this.distirbutedTown.deployGenesisCommunities(0, { from: creator })

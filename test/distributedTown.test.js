@@ -6,6 +6,7 @@ const truffleAssert = require('truffle-assertions');
 const GigStatuses = artifacts.require('GigStatuses');
 const DistributedTown = artifacts.require('DistributedTown');
 const Community = artifacts.require('Community');
+const CommunityFactory = artifacts.require('CommunityFactory');
 const SkillWallet = artifacts.require('skill-wallet/contracts/main/SkillWallet');
 const Gigs = artifacts.require('Gigs');
 const AddressProvider = artifacts.require('AddressProvider');
@@ -19,9 +20,10 @@ contract('DistributedTown', function (accounts) {
         this.gigStatuses = await GigStatuses.new();
         AddressProvider.link(this.gigStatuses);
         this.addressProvder = await AddressProvider.new();
+        this.communityFactory = await CommunityFactory.new();
 
         this.skillWallet = await SkillWallet.new('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876', { from: accounts[2] });
-        this.distirbutedTown = await DistributedTown.new('http://someurl.co', this.skillWallet.address, this.addressProvder.address, { from: accounts[2] });
+        this.distirbutedTown = await DistributedTown.new('http://someurl.co', this.skillWallet.address, this.addressProvder.address, this.communityFactory.address, { from: accounts[2] });
     });
     describe('Deploy Genesis Communities', async function () {
         it("create genesis community", async function () {

@@ -80,7 +80,7 @@ contract Community is ICommunity {
             gigsAddr = GigsFactory(provider.gigsFactory()).deploy();
             totalMembersAllowed = _totalMembersAllowed;
             claimableSkillWallets = _claimableSkillWallets;
-            joinNewMember(_url, 2000 * 1e18);
+            _joinNewMember(_distributedTownAddr, _url, 2000 * 1e18);
 
             status = STATUS.ACTIVE;
         } else {
@@ -136,25 +136,29 @@ contract Community is ICommunity {
         status = STATUS.MIGRATED;
     }
 
-    // check if it's called only from deployer.
     function joinNewMember(string memory uri, uint256 credits) public override {
+        _joinNewMember(msg.sender, uri, credits);
+    }
+
+    // check if it's called only from deployer.
+    function _joinNewMember(address _member, string memory uri, uint256 credits) private {
         require(
             activeMembersCount <= totalMembersAllowed,
             "No free spots left!"
         );
         
-        require(!isMember[msg.sender], "Already a member");
+        require(!isMember[_member], "Already a member");
 
         // the DiTo contract can only join the treasury as a member of the community
-        address newMemberAddress = msg.sender == distributedTownAddr
+        address newMemberAddress = _member == distributedTownAddr
             ? treasuryAddr
-            : msg.sender;
+            : _member;
 
         ISkillWallet skillWallet = ISkillWallet(
             DistributedTown(distributedTownAddr).skillWalletAddress()
         );
 
-        bool claimableSW = address(this) == msg.sender ? false : claimableSkillWallets;
+        bool claimableSW = address(this) == _member ? false : claimableSkillWallets;
         skillWallet.create(newMemberAddress, uri, claimableSW);
 
         uint256 token = 0;
