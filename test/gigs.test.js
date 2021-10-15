@@ -114,7 +114,7 @@ contract('Gigs', function ([
     )
 
     this.addressProvder = await AddressProvider.new()
-    this.communityFactory = await CommunityFactory.new();
+    this.communityFactory = await CommunityFactory.new(1);
     this.distirbutedTown = await DistributedTown.new(
       'http://someurl.co',
       skillWallet.address,

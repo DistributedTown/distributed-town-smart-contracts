@@ -33,6 +33,8 @@ contract Community is ICommunity {
         MIGRATED
     }
 
+    uint256 public version;
+
     STATUS public status;
     address public migratedFrom;
     address public migratedTo;
@@ -62,7 +64,8 @@ contract Community is ICommunity {
         address _addrProvider,
         uint256 _totalMembersAllowed,
         bool _claimableSkillWallets,
-        address _migrateFrom
+        address _migrateFrom,
+        uint256 _version
     ) public {
         if (_migrateFrom == address(0)) {
             metadataUri = _url;
@@ -99,6 +102,8 @@ contract Community is ICommunity {
             status = STATUS.IN_PROGRESS;
             migratedFrom = _migrateFrom;
         }
+        
+        version = _version;
     }
 
     function migrateData() public {

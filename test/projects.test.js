@@ -23,7 +23,7 @@ contract('Projects', function ([_, registryFunder, creator, member]) {
     this.gigStatuses = await GigStatuses.new()
     AddressProvider.link(this.gigStatuses)
     this.addressProvder = await AddressProvider.new()
-    this.communityFactory = await CommunityFactory.new();
+    this.communityFactory = await CommunityFactory.new(1);
 
     // SkillWallet
     this.linkTokenMock = await LinkToken.new()

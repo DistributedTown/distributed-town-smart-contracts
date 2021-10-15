@@ -58,6 +58,12 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         communityFactoryAddress = _communityFactory;
     }
 
+    function updateCommunityFactory (address _newFactory) public onlyOwner {
+        require(CommunityFactory(communityFactoryAddress).version() < CommunityFactory(_newFactory).version(), "Not a new version");
+
+        communityFactoryAddress = _newFactory;
+    }
+
     function createCommunity(
         string memory communityMetadata,
         uint template,
@@ -100,6 +106,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
 
     function migrateCommunity(address _community) public {
         require(ownerToCommunity[msg.sender] == _community, "Not community owner");
+        require(CommunityFactory(communityFactoryAddress).version() > Community(_community).version(), "Already latest version");
 
         address newComAddr = CommunityFactory(communityFactoryAddress).createCommunity("", address(0), 0, false, _community);
 

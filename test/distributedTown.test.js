@@ -20,7 +20,7 @@ contract('DistributedTown', function (accounts) {
         this.gigStatuses = await GigStatuses.new();
         AddressProvider.link(this.gigStatuses);
         this.addressProvder = await AddressProvider.new();
-        this.communityFactory = await CommunityFactory.new();
+        this.communityFactory = await CommunityFactory.new(1);
 
         this.skillWallet = await SkillWallet.new('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876', { from: accounts[2] });
         this.distirbutedTown = await DistributedTown.new('http://someurl.co', this.skillWallet.address, this.addressProvder.address, this.communityFactory.address, { from: accounts[2] });
