@@ -29,9 +29,9 @@ contract Community is ICommunity {
 
     uint16 public activeMembersCount;
     uint256 public scarcityScore;
-    uint256[] public skillWalletIds;
     uint256 public tokenId;
-    address[] public memberAddresses;
+
+    uint256[] public skillWalletIds;
     mapping(address => bool) public isMember;
 
     address distributedTownAddr;
@@ -39,7 +39,7 @@ contract Community is ICommunity {
     address public treasuryAddr;
     address public gigsAddr;
     address public ditoCreditsHolder;
-    uint256[] projectIds;
+
     uint256 totalMembersAllowed;
     bool claimableSkillWallets;
 
@@ -68,13 +68,12 @@ contract Community is ICommunity {
         joinNewMember(_url, 2000 * 1e18);
     }
 
-    // check if it's called only from deployer.
     function joinNewMember(string memory uri, uint256 credits) public override {
         require(
             activeMembersCount <= totalMembersAllowed,
             "No free spots left!"
         );
-        
+
         require(!isMember[msg.sender], "Already a member");
 
         // the DiTo contract can only join the treasury as a member of the community
@@ -86,14 +85,15 @@ contract Community is ICommunity {
             DistributedTown(distributedTownAddr).skillWalletAddress()
         );
 
-        bool claimableSW = address(this) == msg.sender ? false : claimableSkillWallets;
+        bool claimableSW = address(this) == msg.sender
+            ? false
+            : claimableSkillWallets;
         skillWallet.create(newMemberAddress, uri, claimableSW);
 
         uint256 token = 0;
         if (claimableSkillWallets)
             token = skillWallet.getClaimableSkillWalletId(newMemberAddress);
-        else 
-            token = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
+        else token = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
 
         DITOCredit(ditoCreditsAddr).addToWhitelist(newMemberAddress);
         DITOCredit(ditoCreditsAddr).operatorSend(
@@ -105,57 +105,14 @@ contract Community is ICommunity {
         );
 
         skillWalletIds.push(token);
-        memberAddresses.push(newMemberAddress);
         isMember[newMemberAddress] = true;
         activeMembersCount++;
 
         emit MemberAdded(newMemberAddress, token, credits);
     }
 
-    function join(uint256 skillWalletTokenId, uint256 credits) public override {
-        require(
-            activeMembersCount <= totalMembersAllowed,
-            "No free spots left!"
-        );
-
-        ISkillWallet skillWallet = ISkillWallet(
-            DistributedTown(distributedTownAddr).skillWalletAddress()
-        );
-        address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
-
-        require(!isMember[skillWalletAddress], "You have already joined!");
-
-        // require(
-        //     msg.sender == skillWalletAddress,
-        //     "Only the skill wallet owner can call this function"
-        // );
-
-        isMember[skillWalletAddress] = true;
-        skillWalletIds[activeMembersCount] = skillWalletTokenId;
-        // skillWalletIds[1] = 123;
-        activeMembersCount++;
-
-        DITOCredit(ditoCreditsAddr).addToWhitelist(skillWalletAddress);
-        DITOCredit(ditoCreditsAddr).transfer(skillWalletAddress, credits);
-
-        emit MemberAdded(skillWalletAddress, skillWalletTokenId, credits);
-    }
-
-    function leave(address memberAddress) public override {
-        emit MemberLeft(memberAddress);
-    }
-
     function getMembers() public view override returns (uint256[] memory) {
         return skillWalletIds;
-    }
-
-    function getMemberAddresses()
-        public
-        view
-        override
-        returns (address[] memory)
-    {
-        return memberAddresses;
     }
 
     // TODO: check called only by milestones!
@@ -218,24 +175,9 @@ contract Community is ICommunity {
     }
 
     function getProjects() public view override returns (uint256[] memory) {
-        return projectIds;
-    }
-
-    // Called only by project (or create project from Community.sol (better))
-    function addProjectId(uint256 projectId) public override {
-        projectIds.push(projectId);
-    }
-
-    function getProjectTreasuryAddress(uint256 projectId)
-        public
-        view
-        override
-        returns (address)
-    {
-        Projects projects = Projects(
-            DistributedTown(distributedTownAddr).projectsAddress()
-        );
-        return projects.getProjectTreasuryAddress(projectId);
+        return
+            Projects(DistributedTown(distributedTownAddr).projectsAddress())
+                .getCommunityProjects(address(this));
     }
 
     function getSkillWalletAddress() public override returns (address) {

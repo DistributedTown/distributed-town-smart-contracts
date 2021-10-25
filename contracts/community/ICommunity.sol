@@ -23,14 +23,8 @@ interface ICommunity {
         uint256 credits
     ) external;
 
-    function join(uint256 skillWalletTokenId, uint256 credits) external;
-
-    function leave(address memberAddress) external;
-
     function getMembers() external view returns (uint256[] memory);
     
-    function getMemberAddresses() external view returns (address[] memory);
-
     // TODO: check called only by milestones!
     function transferToCommunity(address from, uint256 amount) external;
 
@@ -41,14 +35,6 @@ interface ICommunity {
     function getTreasuryBalance() external view returns (uint256);
 
     function getProjects() external view returns (uint256[] memory);
-
-    // Called only by project (or create project from Community.sol (better))
-    function addProjectId(uint256 projectId) external;
-
-    function getProjectTreasuryAddress(uint256 projectId)
-        external
-        view
-        returns (address);
 
     function balanceOf(address member) external view returns (uint256);
 

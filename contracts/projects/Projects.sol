@@ -23,9 +23,8 @@ contract Projects is IERC721Metadata, ERC721 {
 
     Counters.Counter private projectId;
 
-    mapping(address => uint256[]) communityToTokenId;
-    mapping(uint256 => uint256[]) templateProjects;
-    mapping(uint256 => uint256[]) members;
+    mapping(address => uint256[]) public communityToTokenId;
+    mapping(uint256 => uint256[]) public templateProjects;
     mapping(uint256 => address) public projectToTreasury;
     ISkillWallet skillWallet;
     
@@ -36,28 +35,29 @@ contract Projects is IERC721Metadata, ERC721 {
         skillWallet = ISkillWallet(_skillWalletAddress);
     }
 
-    function createProject(string memory _props, address _communityAddress, address creator) public {
+    function createProject(string memory _props, address _communityAddress) public {
 
         Community community = Community(_communityAddress);
-        bool isRegistered = skillWallet.isSkillWalletRegistered(creator);
+        bool isRegistered = skillWallet.isSkillWalletRegistered(msg.sender);
         require(isRegistered, 'Only a registered skill wallet can create a project.');
 
-        uint256 skillWalletId = skillWallet.getSkillWalletIdByOwner(creator);
+        uint256 skillWalletId = skillWallet.getSkillWalletIdByOwner(msg.sender);
         bool isActive = skillWallet.isSkillWalletActivated(skillWalletId);
         require(isActive, 'Only an active skill wallet can create a project.');
 
-        bool isMember = community.isMember(creator);
+        bool isMember = community.isMember(msg.sender);
         require(isMember, 'Only a member of the community can create a project.');
+
+        // TODO: import membership ID here.
 
         uint256 template = community.getTemplate();
 
         uint256 newProjectId = projectId.current();
         projectId.increment();
 
-        _mint(creator, newProjectId);
+        _mint(msg.sender, newProjectId);
         _setTokenURI(newProjectId, _props);
 
-        community.addProjectId(newProjectId);
         projectToTreasury[newProjectId] = address(new ProjectTreasury());
 
         communityToTokenId[_communityAddress].push(newProjectId);
@@ -66,8 +66,7 @@ contract Projects is IERC721Metadata, ERC721 {
         emit ProjectCreated(newProjectId, template, _communityAddress);
     }
 
-    // TODO: check if the community is calling this function
-    function getProjectTreasuryAddress(uint256 project) public view returns(address) {
+    function getProjectTreasuryAddress(uint256 project) public view returns(address treasury) {
         return projectToTreasury[project];
     }
 
