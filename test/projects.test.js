@@ -11,6 +11,7 @@ const DistributedTown = artifacts.require('DistributedTown')
 const Community = artifacts.require('Community')
 const AddressProvider = artifacts.require('AddressProvider')
 const Projects = artifacts.require('Projects')
+const CommunityFactory = artifacts.require('CommunityFactory');
 const metadataUrl =
   'https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice'
 var BN = web3.utils.BN
@@ -22,6 +23,7 @@ contract('Projects', function ([_, registryFunder, creator, member]) {
     this.gigStatuses = await GigStatuses.new()
     AddressProvider.link(this.gigStatuses)
     this.addressProvder = await AddressProvider.new()
+    this.communityFactory = await CommunityFactory.new(1);
 
     // SkillWallet
     this.linkTokenMock = await LinkToken.new()
@@ -36,6 +38,7 @@ contract('Projects', function ([_, registryFunder, creator, member]) {
       'http://someurl.co',
       this.skillWallet.address,
       this.addressProvder.address,
+      this.communityFactory.address,
       { from: creator },
     )
     await this.distirbutedTown.deployGenesisCommunities(0, { from: creator })

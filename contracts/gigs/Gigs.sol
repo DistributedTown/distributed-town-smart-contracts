@@ -23,6 +23,12 @@ contract Gigs is IGigs, IERC721Metadata, ERC721 {
         community = Community(communityAddress);
     }
 
+    function setCommunityAddress(address _newCommunityAddress) public {
+        require(msg.sender == address(community), "Caller not community");
+
+        community = Community(_newCommunityAddress);
+    }
+
     // in the metadata uri - skills, title, description
     function createGig(
         uint256 _ditoCredits,

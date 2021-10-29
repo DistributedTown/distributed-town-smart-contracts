@@ -25,6 +25,20 @@ import "./DiToCreditCommunityHolder.sol";
  */
 
 contract Community is ICommunity {
+    //IN_PROGRESS - data migration TO this community is in progress; 
+    //MIGRATED - community is migrated to new version (ownerships are transfered and data can be migrated to new version)
+    enum STATUS {
+        ACTIVE,
+        IN_PROGRESS,
+        MIGRATED
+    }
+
+    uint256 public version;
+
+    STATUS public status;
+    address public migratedFrom;
+    address public migratedTo;
+
     string public metadataUri;
 
     uint16 public activeMembersCount;
@@ -34,59 +48,122 @@ contract Community is ICommunity {
     address[] public memberAddresses;
     mapping(address => bool) public isMember;
 
-    address distributedTownAddr;
+    address public distributedTownAddr;
     address public ditoCreditsAddr;
     address public treasuryAddr;
     address public gigsAddr;
     address public ditoCreditsHolder;
-    uint256[] projectIds;
-    uint256 totalMembersAllowed;
-    bool claimableSkillWallets;
+    uint256[] public projectIds;
+    uint256 public totalMembersAllowed;
+    bool public claimableSkillWallets;
 
     // add JSON Schema base URL
     constructor(
+        address _distributedTownAddr,
         string memory _url,
         address _addrProvider,
         uint256 _totalMembersAllowed,
-        bool _claimableSkillWallets
+        bool _claimableSkillWallets,
+        address _migrateFrom,
+        uint256 _version
     ) public {
-        metadataUri = _url;
-        distributedTownAddr = msg.sender;
+        if (_migrateFrom == address(0)) {
+            metadataUri = _url;
+            distributedTownAddr = _distributedTownAddr;
 
-        AddressProvider provider = AddressProvider(_addrProvider);
-        ditoCreditsHolder = address(new DiToCreditCommunityHolder());
-        DiToCreditsFactory creditsFactory = DiToCreditsFactory(
-            provider.ditoTokenFactory()
-        );
-        ditoCreditsAddr = creditsFactory.deploy(ditoCreditsHolder);
-        treasuryAddr = TreasuryFactory(provider.treasuryFactory()).deploy(
-            ditoCreditsAddr
-        );
-        gigsAddr = GigsFactory(provider.gigsFactory()).deploy();
-        totalMembersAllowed = _totalMembersAllowed;
-        claimableSkillWallets = _claimableSkillWallets;
-        joinNewMember(_url, 2000 * 1e18);
+            AddressProvider provider = AddressProvider(_addrProvider);
+            ditoCreditsHolder = address(new DiToCreditCommunityHolder());
+            DiToCreditsFactory creditsFactory = DiToCreditsFactory(
+                provider.ditoTokenFactory()
+            );
+            ditoCreditsAddr = creditsFactory.deploy(ditoCreditsHolder);
+            treasuryAddr = TreasuryFactory(provider.treasuryFactory()).deploy(
+                ditoCreditsAddr
+            );
+            gigsAddr = GigsFactory(provider.gigsFactory()).deploy();
+            totalMembersAllowed = _totalMembersAllowed;
+            claimableSkillWallets = _claimableSkillWallets;
+            _joinNewMember(_distributedTownAddr, _url, 2000 * 1e18);
+
+            status = STATUS.ACTIVE;
+        } else {
+            Community currentCommunity = Community(_migrateFrom);
+            require(currentCommunity.status() == STATUS.ACTIVE, "Community not active");
+
+            metadataUri = currentCommunity.metadataUri();
+            distributedTownAddr = currentCommunity.distributedTownAddr();
+            ditoCreditsHolder = currentCommunity.ditoCreditsHolder();
+            ditoCreditsAddr = currentCommunity.ditoCreditsAddr();
+            treasuryAddr = currentCommunity.treasuryAddr();
+            gigsAddr = currentCommunity.gigsAddr();
+            totalMembersAllowed = currentCommunity.totalMembersAllowed();
+            claimableSkillWallets = currentCommunity.claimableSkillWallets();
+
+            status = STATUS.IN_PROGRESS;
+            migratedFrom = _migrateFrom;
+        }
+        
+        version = _version;
+    }
+
+    function migrateData() public {
+        require(status == STATUS.IN_PROGRESS, "Migration is not in progress");
+
+        Community currentCommunity = Community(migratedFrom);
+        require(currentCommunity.status() == STATUS.MIGRATED, "Community not migrated");
+
+        memberAddresses = currentCommunity.getMemberAddresses(); 
+        skillWalletIds = currentCommunity.getMembers(); 
+        projectIds = currentCommunity.getProjects();
+
+        activeMembersCount = currentCommunity.activeMembersCount();
+        scarcityScore = currentCommunity.scarcityScore();
+        tokenId = currentCommunity.tokenId();
+
+        for (uint256 i = 0; i < memberAddresses.length; i++) {
+            isMember[memberAddresses[i]] = true;
+        }
+
+        status = STATUS.ACTIVE;
+    }
+
+    //for original community (that is being migrated) to finalize migration
+    function markAsMigrated(address _migratedTo) public {
+        require(msg.sender == distributedTownAddr, "Caller not dito");
+        require(status == STATUS.ACTIVE, "Community not active");
+        require(Community(_migratedTo).status() == STATUS.IN_PROGRESS, "Migration si not in progress");
+
+        DITOCredit(ditoCreditsAddr).transferOwnership(_migratedTo);
+        Treasury(treasuryAddr).setCommunityAddress(_migratedTo);
+        Gigs(gigsAddr).setCommunityAddress(_migratedTo);
+
+        migratedTo = _migratedTo;
+        status = STATUS.MIGRATED;
+    }
+
+    function joinNewMember(string memory uri, uint256 credits) public override {
+        _joinNewMember(msg.sender, uri, credits);
     }
 
     // check if it's called only from deployer.
-    function joinNewMember(string memory uri, uint256 credits) public override {
+    function _joinNewMember(address _member, string memory uri, uint256 credits) private {
         require(
             activeMembersCount <= totalMembersAllowed,
             "No free spots left!"
         );
         
-        require(!isMember[msg.sender], "Already a member");
+        require(!isMember[_member], "Already a member");
 
         // the DiTo contract can only join the treasury as a member of the community
-        address newMemberAddress = msg.sender == distributedTownAddr
+        address newMemberAddress = _member == distributedTownAddr
             ? treasuryAddr
-            : msg.sender;
+            : _member;
 
         ISkillWallet skillWallet = ISkillWallet(
             DistributedTown(distributedTownAddr).skillWalletAddress()
         );
 
-        bool claimableSW = address(this) == msg.sender ? false : claimableSkillWallets;
+        bool claimableSW = address(this) == _member ? false : claimableSkillWallets;
         skillWallet.create(newMemberAddress, uri, claimableSW);
 
         uint256 token = 0;
