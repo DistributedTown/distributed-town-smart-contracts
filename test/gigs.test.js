@@ -40,6 +40,7 @@ contract('Gigs', function ([
     const SkillWallet = await ethers.getContractFactory('SkillWallet');
     const LinkToken = await ethers.getContractFactory("LinkToken");
     const MockOracle = await ethers.getContractFactory("MockOracle");
+    const CommunityFactory = await ethers.getContractFactory("CommunityFactory");
 
     erc1820 = await singletons.ERC1820Registry(deployer.address);
     const gigStatuses = await GigStatuses.deploy();
@@ -59,6 +60,10 @@ contract('Gigs', function ([
     const addressProvder = await AddressProvider.deploy();
     await addressProvder.deployed();
 
+
+    const communityFactory = await CommunityFactory.deploy([1]);
+    await communityFactory.deployed();
+
     linkTokenMock = await LinkToken.deploy();
     await linkTokenMock.deployed();
 
@@ -73,7 +78,7 @@ contract('Gigs', function ([
 
     distributedTown = await upgrades.deployProxy(
       DistributedTown,
-      ['http://someurl.co', skillWallet.address, addressProvder.address],
+      ['http://someurl.co', skillWallet.address, addressProvder.address, communityFactory.address],
     );
 
     await distributedTown.deployed();

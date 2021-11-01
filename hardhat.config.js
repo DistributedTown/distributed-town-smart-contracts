@@ -9,6 +9,7 @@ require("@tenderly/hardhat-tenderly")
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-truffle5");
 require('@openzeppelin/hardhat-upgrades');
+require('hardhat-contract-sizer');
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
@@ -121,6 +122,12 @@ module.exports = {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
     apiKey: "PSW8C433Q667DVEX5BCRMGNAH9FSGFZ7Q8"
+  },
+  contractSizer: {
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
   }
 };
 

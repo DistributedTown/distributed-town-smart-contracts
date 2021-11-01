@@ -23,15 +23,21 @@ contract Treasury is IERC721Receiver, IERC777Recipient {
     bytes32 private constant TOKENS_RECIPIENT_INTERFACE_HASH =
         keccak256("ERC777TokensRecipient");
 
-    constructor(address ditoCreditsAddress, address communityAddress) public {
-        ditoCredits = DITOCredit(ditoCreditsAddress);
-        communityAddress = communityAddress;
+    constructor(address _ditoCreditsAddress, address _communityAddress) public {
+        ditoCredits = DITOCredit(_ditoCreditsAddress);
+        communityAddress = _communityAddress;
 
         _erc1820.setInterfaceImplementer(
             address(this),
             TOKENS_RECIPIENT_INTERFACE_HASH,
             address(this)
         );
+    }
+
+    function setCommunityAddress(address _newCommunityAddress) public {
+        require(msg.sender == communityAddress, "Caller not community");
+
+        communityAddress = _newCommunityAddress;
     }
 
     function returnCreditsIfThresholdReached() public {

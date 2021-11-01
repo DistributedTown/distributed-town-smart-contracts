@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "skill-wallet/contracts/main/ISkillWallet.sol";
 
 import "./community/Community.sol";
+import "./community/CommunityFactory.sol";
 import "./IDistributedTown.sol";
 
 /**
@@ -44,13 +45,21 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
     function initialize(
          string memory _url,
         address _skillWalletAddress,
-        address _addrProvider
+        address _addrProvider,
+        address _communityFactory
     ) public initializer {
         __Ownable_init();
         __ERC1155_init(_url);
-        
+        // initialize pos values of the 3 templates;
         skillWalletAddress = _skillWalletAddress;
         addressProvider = _addrProvider;
+        communityFactoryAddress = _communityFactory;
+    }
+
+    function updateCommunityFactory (address _newFactory) public onlyOwner {
+        require(CommunityFactory(communityFactoryAddress).version() < CommunityFactory(_newFactory).version(), "Not a new version");
+
+        communityFactoryAddress = _newFactory;
     }
 
     function createCommunity(
@@ -82,9 +91,7 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
         communityTokenIds.increment();
         uint newItemId = communityTokenIds.current();
 
-        address comAddr = address(
-            new Community(communityMetadata, addressProvider, membersCount, false)
-        );
+        address comAddr = CommunityFactory(communityFactoryAddress).createCommunity(communityMetadata, addressProvider, membersCount, false, address(0));
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
         ownerToCommunity[owner] = comAddr;
@@ -93,6 +100,24 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
 
         //TODO: add the creator as a community member
         emit CommunityCreated(comAddr, newItemId, template, owner);
+    }
+
+    function migrateCommunity(address _community) public {
+        require(ownerToCommunity[msg.sender] == _community, "Not community owner");
+        require(CommunityFactory(communityFactoryAddress).version() > Community(_community).version(), "Already latest version");
+
+        address newComAddr = CommunityFactory(communityFactoryAddress).createCommunity("", address(0), 0, false, _community);
+
+        Community(_community).markAsMigrated(newComAddr);
+        Community(newComAddr).migrateData();
+
+        uint256 comId = communityAddressToTokenID[_community];
+        communities[comId] = newComAddr;
+        delete communityAddressToTokenID[_community];
+        communityAddressToTokenID[newComAddr] = comId;
+        ownerToCommunity[msg.sender] = newComAddr;
+        isDiToNativeCommunity[newComAddr] = isDiToNativeCommunity[_community];
+        delete isDiToNativeCommunity[_community];
     }
 
     function setPartnersRegistryAddress(address _partnersRegistryAddress)
@@ -130,15 +155,13 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
         ];
         uint newItemId = communityTokenIds.current();
         _mint(address(this), template, 1, "");
-        Community community = new Community(
+        address comAddr =  CommunityFactory(communityFactoryAddress).createCommunity(
             metadata[template],
             addressProvider,
             24,
-            true
+            true,
+            address(0)
         );
-
-        require(address(community) != address(0), "Community Creation failed");
-        address comAddr = address(community);
 
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
