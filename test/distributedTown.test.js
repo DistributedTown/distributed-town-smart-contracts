@@ -103,4 +103,28 @@ contract('DistributedTown', function (
               )
         });
     });
+    describe
+    describe("Community migration", async () => {
+        it("Should update Community Factory in DiTo", async () => {
+            this.communityFactoryV2 = await CommunityFactory.new(2);
+
+            await distributedTown.updateCommunityFactory(this.communityFactoryV2.address, { from: accounts[2] });
+
+            assert.equal(await distributedTown.communityFactoryAddress(), this.communityFactoryV2.address);
+        });
+        it("Should migrate Community using newly deployed Factory", async () => {
+            const communities = await distributedTown.getCommunities();
+            const communityV1Address = communities[0];
+            const comId = await distributedTown.communityAddressToTokenID(communityV1Address);
+
+            await distributedTown.migrateCommunity(communityV1Address, { from: accounts[2] });
+
+            const communityV2Address = await distributedTown.communities(comId);
+            const communityV2 = await Community.at(communityV2Address);
+
+            //assert.equal(communityV2Address, await distributedTown.ownerToCommunity(accounts[2]));
+            assert.notEqual(communityV2Address, communityV1Address);
+            assert.equal(await communityV2.version(), "2");
+        });
+    });
 });
