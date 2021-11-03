@@ -56,6 +56,11 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         projectsAddress = address(projects);
         addressProvider = _addrProvider;
         communityFactoryAddress = _communityFactory;
+        //init slots fro genesis communities
+        for (uint256 i = 0; i <=2; i++) {
+            communities.push(address(0));
+            communityTokenIds.increment();
+        }
     }
 
     function updateCommunityFactory (address _newFactory) public onlyOwner {
@@ -105,7 +110,14 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
     }
 
     function migrateCommunity(address _community) public {
-        require(ownerToCommunity[msg.sender] == _community, "Not community owner");
+        uint256 comId = communityAddressToTokenID[_community];
+
+        if (comId > 2) {
+            require(ownerToCommunity[msg.sender] == _community, "Not community owner");
+        } else {
+            require(msg.sender == owner(), "Not community owner");
+        }
+
         require(CommunityFactory(communityFactoryAddress).version() > Community(_community).version(), "Already latest version");
 
         address newComAddr = CommunityFactory(communityFactoryAddress).createCommunity("", address(0), 0, false, _community);
@@ -113,11 +125,12 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         Community(_community).markAsMigrated(newComAddr);
         Community(newComAddr).migrateData();
 
-        uint256 comId = communityAddressToTokenID[_community];
         communities[comId] = newComAddr;
         delete communityAddressToTokenID[_community];
         communityAddressToTokenID[newComAddr] = comId;
-        ownerToCommunity[msg.sender] = newComAddr;
+        if (comId > 2) {
+            ownerToCommunity[msg.sender] = newComAddr;
+        }
         isDiToNativeCommunity[newComAddr] = isDiToNativeCommunity[_community];
         delete isDiToNativeCommunity[_community];
     }
@@ -148,14 +161,14 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         override
         onlyOwner
     {
-        require(communityTokenIds.current() < 3, "Only the first 3 communities can be deployed as Genesis ones.");
+        require(communities[template] == address(0), "Genesis community for template already deployed");
         require(template >= 0 && template <= 2, "Invalid templateID.");
         string[3] memory metadata = [
             "https://hub.textile.io/ipfs/bafkreick7p4yms7cmwnmfizmcl5e6cdpij4jsl2pkhk5cejn744uwnziny",
             "https://hub.textile.io/ipfs/bafkreid7jtzhuedeggn5welup7iyxchpqodbyam3yfnt4ey4xwnusr3vbe",
             "https://hub.textile.io/ipfs/bafkreibglk3i7c24b2zprsd3jlkzfhxti6rubv3tkif6hu36lz42uwrfki"
         ];
-        uint newItemId = communityTokenIds.current();
+
         _mint(address(this), template, 1, "");
         address comAddr =  CommunityFactory(communityFactoryAddress).createCommunity(
             metadata[template],
@@ -165,12 +178,11 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
             address(0)
         );
 
-        communityAddressToTokenID[comAddr] = newItemId;
-        communityToTemplate[newItemId] = 0;
-        communities.push(comAddr);
+        communityAddressToTokenID[comAddr] = template;
+        communityToTemplate[template] = template;
+        communities[template] = comAddr;
         isDiToNativeCommunity[comAddr] = true;
-        communityTokenIds.increment();
 
-        emit CommunityCreated(address(0), newItemId, 2, msg.sender);
+        emit CommunityCreated(address(0), template, template, msg.sender);
     }
 }

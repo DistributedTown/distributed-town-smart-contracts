@@ -13,6 +13,8 @@ const AddressProvider = artifacts.require('AddressProvider');
 const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
 var BN = web3.utils.BN;
 
+let distributedTown;
+
 contract('DistributedTown', function (accounts) {
 
     before(async function () {
@@ -24,12 +26,37 @@ contract('DistributedTown', function (accounts) {
 
         this.skillWallet = await SkillWallet.new('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876', { from: accounts[2] });
         this.distirbutedTown = await DistributedTown.new('http://someurl.co', this.skillWallet.address, this.addressProvder.address, this.communityFactory.address, { from: accounts[2] });
+        distributedTown = this.distirbutedTown;
     });
     describe('Deploy Genesis Communities', async function () {
         it("create genesis community", async function () {
             const tx = await this.distirbutedTown.deployGenesisCommunities(0, { from: accounts[2] });
             const comCreated = tx.logs[3].event === 'CommunityCreated';
             assert.isTrue(comCreated);
+        });
+    });
+    describe
+    describe("Community migration", async () => {
+        it("Should update Community Factory in DiTo", async () => {
+            this.communityFactoryV2 = await CommunityFactory.new(2);
+
+            await distributedTown.updateCommunityFactory(this.communityFactoryV2.address, { from: accounts[2] });
+
+            assert.equal(await distributedTown.communityFactoryAddress(), this.communityFactoryV2.address);
+        });
+        it("Should migrate Community using newly deployed Factory", async () => {
+            const communities = await distributedTown.getCommunities();
+            const communityV1Address = communities[0];
+            const comId = await distributedTown.communityAddressToTokenID(communityV1Address);
+
+            await distributedTown.migrateCommunity(communityV1Address, { from: accounts[2] });
+
+            const communityV2Address = await distributedTown.communities(comId);
+            const communityV2 = await Community.at(communityV2Address);
+
+            //assert.equal(communityV2Address, await distributedTown.ownerToCommunity(accounts[2]));
+            assert.notEqual(communityV2Address, communityV1Address);
+            assert.equal(await communityV2.version(), "2");
         });
     });
 });
