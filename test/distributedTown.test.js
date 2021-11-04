@@ -1,5 +1,5 @@
 const { singletons } = require('@openzeppelin/test-helpers');
-const { assert } = require('chai');
+const { assert, expect } = require('chai');
 const { upgrades, ethers } = require('hardhat');
 const truffleAssert = require('truffle-assertions')
 
@@ -32,7 +32,7 @@ contract('DistributedTown', function (
         });
 
         const addressProvder = await AddressProvider.deploy();
-        const communityFactory = await CommunityFactory.deploy([1]);
+        const communityFactory = await CommunityFactory.deploy(1);
 
         await addressProvder.deployed();
 
@@ -48,6 +48,7 @@ contract('DistributedTown', function (
     });
 
     describe('Deploy Genesis Communities', async function () {
+        
         it("create genesis community", async function () {
             const tx0 = await (await distributedTown.connect(deployer).deployGenesisCommunities(0)).wait();
             const comCreated0 = tx0.events.find(e => e.event == 'CommunityCreated');
@@ -62,24 +63,14 @@ contract('DistributedTown', function (
             assert.isNotNull(comCreated1)
             assert.isNotNull(comCreated2)
         });
-
+        
         it("should fail deploying genesis communities if doesn't called by deployer", async function () {
-            const failingTx = distributedTown.connect(accounts[2]).deployGenesisCommunities(0);
-            await truffleAssert.reverts(
-                failingTx,
-                'Ownable: caller is not the owner',
-              )
+            expect(distributedTown.connect(accounts[2]).deployGenesisCommunities(0)).to.be.revertedWith("Ownable: caller is not the owner");
         });
-
 
         it("should fail deploying genesis community with invalid template", async function () {
-            const failingTx = distributedTown.connect(deployer).deployGenesisCommunities(5);
-            await truffleAssert.reverts(
-                failingTx,
-                'Invalid templateID',
-              )
+            expect(distributedTown.connect(deployer).deployGenesisCommunities(5)).to.be.revertedWith('Invalid templateID');
         });
-
 
         it("should fail deploying 4th genesis community", async function () {
            
@@ -99,32 +90,46 @@ contract('DistributedTown', function (
             const failingTx = distributedTown.connect(deployer).deployGenesisCommunities(0);
             await truffleAssert.reverts(
                 failingTx,
-                'Only the first 3 communities can be deployed as Genesis ones',
+                'Genesis community for template already deployed',
               )
         });
     });
     describe
     describe("Community migration", async () => {
         it("Should update Community Factory in DiTo", async () => {
-            this.communityFactoryV2 = await CommunityFactory.new(2);
+            const CommunityFactory = await ethers.getContractFactory('CommunityFactory');
+            const communityFactoryV2 = await CommunityFactory.deploy(2);
 
-            await distributedTown.updateCommunityFactory(this.communityFactoryV2.address, { from: accounts[2] });
+            await distributedTown.updateCommunityFactory(communityFactoryV2.address);
 
-            assert.equal(await distributedTown.communityFactoryAddress(), this.communityFactoryV2.address);
+            assert.equal(await distributedTown.communityFactoryAddress(), communityFactoryV2.address);
         });
         it("Should migrate Community using newly deployed Factory", async () => {
+            await (await distributedTown.connect(deployer).deployGenesisCommunities(0)).wait();
+            await (await distributedTown.connect(deployer).deployGenesisCommunities(1)).wait();
+            await (await distributedTown.connect(deployer).deployGenesisCommunities(2)).wait();
+            const CommunityFactory = await ethers.getContractFactory('CommunityFactory');
+            const communityFactoryV2 = await CommunityFactory.deploy(2);
+
+            await distributedTown.updateCommunityFactory(communityFactoryV2.address);
+
             const communities = await distributedTown.getCommunities();
             const communityV1Address = communities[0];
             const comId = await distributedTown.communityAddressToTokenID(communityV1Address);
 
-            await distributedTown.migrateCommunity(communityV1Address, { from: accounts[2] });
+            await distributedTown.migrateCommunity(communityV1Address);
 
             const communityV2Address = await distributedTown.communities(comId);
-            const communityV2 = await Community.at(communityV2Address);
+            const communityV2 = await ethers.getContractAt("Community", communityV2Address);
+            
+            const communitiesAfter = await distributedTown.getCommunities();
 
-            //assert.equal(communityV2Address, await distributedTown.ownerToCommunity(accounts[2]));
             assert.notEqual(communityV2Address, communityV1Address);
+            assert.equal(communityV2Address, communitiesAfter[0]);
             assert.equal(await communityV2.version(), "2");
+
+            assert.equal(communitiesAfter[1], communities[1]);
+            assert.equal(communitiesAfter[2], communities[2]);
         });
     });
 });

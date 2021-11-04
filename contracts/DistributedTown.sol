@@ -159,8 +159,9 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
         override
        onlyOwner
     {
-        require(communities[template] == address(0), "Genesis community for template already deployed");
         require(template >= 0 && template <= 2, "Invalid templateID.");
+        require(communities[template] == address(0), "Genesis community for template already deployed");
+        
         string[3] memory metadata = [
             "https://hub.textile.io/ipfs/bafkreick7p4yms7cmwnmfizmcl5e6cdpij4jsl2pkhk5cejn744uwnziny",
             "https://hub.textile.io/ipfs/bafkreid7jtzhuedeggn5welup7iyxchpqodbyam3yfnt4ey4xwnusr3vbe",
