@@ -139,6 +139,26 @@
       "address": "0x1ab37d7CDe146600C9f0bCE0A7FcC09881F5BBb8",
       "txHash": "0xb85110f35d9f868c1ac5fe33a79a97c47de2d8265cf47bb0284e010c8f029461",
       "kind": "transparent"
+    },
+    {
+      "address": "0x20607495D3E925Bf7B555cC9252C738295de6681",
+      "txHash": "0xf9df30fc87341c70268de0f47ba9e47711f86698461e2d9d4953331ea5ab470f",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x60d1689E19C99bA0369a3754daC3388A5E032E7e",
+      "txHash": "0x14018f2da0f0dbafaaaba668e050d14321b74ee5c0eec04c6d88ce0dc61292d3",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x7521677F7A8F726331DE2425CdBCC544a3E7914f",
+      "txHash": "0xbf26a845bb2a9ef542a51d5421ac619502466bea2bcc5ce5e8264bb3f3dbd7bd",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x351A579a3b5f35B874b20ff710A555252D25d1c9",
+      "txHash": "0xdfdf1eb9524da05a9192d946d54aa2dcdd67be1e1bba3854fb0ae6aa555c57b4",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -2756,6 +2776,211 @@
             "label": "partnersRegistryAddress",
             "type": "t_address",
             "src": "contracts/DistributedTown.sol:41"
+          }
+        ],
+        "types": {
+          "t_struct(Counter)2792_storage": {
+            "label": "struct CountersUpgradeable.Counter",
+            "members": [
+              {
+                "label": "_value",
+                "type": "t_uint256"
+              }
+            ]
+          },
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)"
+          },
+          "t_mapping(t_address,t_address)": {
+            "label": "mapping(address => address)"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_mapping(t_uint256,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(uint256 => mapping(address => uint256))"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_bool))": {
+            "label": "mapping(address => mapping(address => bool))"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_array(t_uint256)47_storage": {
+            "label": "uint256[47]"
+          },
+          "t_mapping(t_bytes4,t_bool)": {
+            "label": "mapping(bytes4 => bool)"
+          },
+          "t_bytes4": {
+            "label": "bytes4"
+          }
+        }
+      }
+    },
+    "824c62dcd830bc4d7dbf903d526415d68e7510d0a0d4f69ec34fac9ea020a3c6": {
+      "address": "0xc97d4041d69B03C77AB10705Ea90BDBd888082C4",
+      "txHash": "0x793f17eb908b1e211bb09d6638437c7f3177b8e962680e41904135943ad98e80",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:25"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol:30"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:31"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "_supportedInterfaces",
+            "type": "t_mapping(t_bytes4,t_bool)",
+            "src": "@openzeppelin/contracts-upgradeable/introspection/ERC165Upgradeable.sol:23"
+          },
+          {
+            "contract": "ERC165Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/introspection/ERC165Upgradeable.sol:59"
+          },
+          {
+            "contract": "ERC1155Upgradeable",
+            "label": "_balances",
+            "type": "t_mapping(t_uint256,t_mapping(t_address,t_uint256))",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol:27"
+          },
+          {
+            "contract": "ERC1155Upgradeable",
+            "label": "_operatorApprovals",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol:30"
+          },
+          {
+            "contract": "ERC1155Upgradeable",
+            "label": "_uri",
+            "type": "t_string_storage",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol:33"
+          },
+          {
+            "contract": "ERC1155Upgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)47_storage",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol:421"
+          },
+          {
+            "contract": "ERC1155ReceiverUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155ReceiverUpgradeable.sol:24"
+          },
+          {
+            "contract": "ERC1155HolderUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155HolderUpgradeable.sol:27"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "_owner",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:20"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:74"
+          },
+          {
+            "contract": "DistributedTown",
+            "label": "communityTokenIds",
+            "type": "t_struct(Counter)2792_storage",
+            "src": "contracts/DistributedTown.sol:32"
+          },
+          {
+            "contract": "DistributedTown",
+            "label": "communityAddressToTokenID",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/DistributedTown.sol:34"
+          },
+          {
+            "contract": "DistributedTown",
+            "label": "communityToTemplate",
+            "type": "t_mapping(t_uint256,t_uint256)",
+            "src": "contracts/DistributedTown.sol:35"
+          },
+          {
+            "contract": "DistributedTown",
+            "label": "ownerToCommunity",
+            "type": "t_mapping(t_address,t_address)",
+            "src": "contracts/DistributedTown.sol:36"
+          },
+          {
+            "contract": "DistributedTown",
+            "label": "isDiToNativeCommunity",
+            "type": "t_mapping(t_address,t_bool)",
+            "src": "contracts/DistributedTown.sol:37"
+          },
+          {
+            "contract": "DistributedTown",
+            "label": "communities",
+            "type": "t_array(t_address)dyn_storage",
+            "src": "contracts/DistributedTown.sol:38"
+          },
+          {
+            "contract": "DistributedTown",
+            "label": "skillWalletAddress",
+            "type": "t_address",
+            "src": "contracts/DistributedTown.sol:39"
+          },
+          {
+            "contract": "DistributedTown",
+            "label": "communityFactoryAddress",
+            "type": "t_address",
+            "src": "contracts/DistributedTown.sol:40"
+          },
+          {
+            "contract": "DistributedTown",
+            "label": "addressProvider",
+            "type": "t_address",
+            "src": "contracts/DistributedTown.sol:41"
+          },
+          {
+            "contract": "DistributedTown",
+            "label": "partnersRegistryAddress",
+            "type": "t_address",
+            "src": "contracts/DistributedTown.sol:42"
           }
         ],
         "types": {

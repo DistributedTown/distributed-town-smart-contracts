@@ -10,7 +10,7 @@ const main = async () => {
     const gigStatuses = await GigStatuses.deploy();
     await gigStatuses.deployed();
     console.log('gigStatusesAddress', gigStatuses.address)
-    const skillWalletAddress = '0xF89424a725298737086812173f0Dc7DfD221Dc60';
+    const skillWalletAddress = '0x044F5A0F1fEE8cEa95Da4574de375A4Ea1DF39EF';
 
     const addressProvider = await deploy('AddressProvider', [], {},
         {
@@ -18,13 +18,18 @@ const main = async () => {
         });
     await addressProvider.deployed();
 
+    const communityFactory = await deploy('CommunityFactory', [1], {});
+
     const DistributedTown = await ethers.getContractFactory('DistributedTown');
 
     const distributedTown = await upgrades.deployProxy(DistributedTown, [
         'http://someurl.io', 
         skillWalletAddress, 
-        addressProvider.address
-    ]);
+        addressProvider.address,
+        communityFactory.address
+    ], {
+        gasLimit: 9500000
+    });
     await distributedTown.deployed();
 
     const a = await distributedTown.deployGenesisCommunities(0);
