@@ -17,6 +17,12 @@ interface ICommunity {
     );
     event MemberLeft(address indexed _member);
 
+    enum STATUS {
+        ACTIVE,
+        IN_PROGRESS,
+        MIGRATED
+    }
+
     // check if it's called only from deployer.
     function joinNewMember(
         string memory uri,

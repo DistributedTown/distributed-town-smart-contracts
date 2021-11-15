@@ -5,17 +5,17 @@ pragma experimental ABIEncoderV2;
 import "skill-wallet/contracts/main/ISkillWallet.sol";
 import "skill-wallet/contracts/mocks/MockOracle.sol";
 
-import "./ICommunity.sol";
-import "./Treasury.sol";
-import "./TreasuryFactory.sol";
-import "./DITOCredit.sol";
-import "./DITOCreditFactory.sol";
+import "../community/ICommunity.sol";
+import "../community/Treasury.sol";
+import "../community/TreasuryFactory.sol";
+import "../community/DITOCredit.sol";
+import "../community/DITOCreditFactory.sol";
 import "../gigs/Gigs.sol";
 import "../gigs/GigsFactory.sol";
 import "../DistributedTown.sol";
 import "../projects/Projects.sol";
 import "../AddressProvider.sol";
-import "./DiToCreditCommunityHolder.sol";
+import "../community/DiToCreditCommunityHolder.sol";
 
 /**
  * @title DistributedTown Community
@@ -24,7 +24,7 @@ import "./DiToCreditCommunityHolder.sol";
  * @author DistributedTown
  */
 
-contract Community is ICommunity {
+contract MockCommunityV2 is ICommunity {
     //IN_PROGRESS - data migration TO this community is in progress; 
     //MIGRATED - community is migrated to new version (ownerships are transfered and data can be migrated to new version)
 
@@ -99,6 +99,10 @@ contract Community is ICommunity {
         }
         
         version = _version;
+    }
+
+    function v2Function() public pure returns (string memory) {
+        return "I am version 2 function";
     }
 
     function migrateData() public {
