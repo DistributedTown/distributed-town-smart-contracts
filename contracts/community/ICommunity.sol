@@ -17,6 +17,12 @@ interface ICommunity {
     );
     event MemberLeft(address indexed _member);
 
+    enum STATUS {
+        ACTIVE,
+        IN_PROGRESS,
+        MIGRATED
+    }
+
     // check if it's called only from deployer.
     function joinNewMember(
         string memory uri,
@@ -44,11 +50,6 @@ interface ICommunity {
 
     // Called only by project (or create project from Community.sol (better))
     function addProjectId(uint256 projectId) external;
-
-    function getProjectTreasuryAddress(uint256 projectId)
-        external
-        view
-        returns (address);
 
     function balanceOf(address member) external view returns (uint256);
 

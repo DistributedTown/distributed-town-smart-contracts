@@ -1,45 +1,81 @@
 const { expectEvent, singletons, constants } = require('@openzeppelin/test-helpers');
 const { assert } = require('chai');
-const { ZERO_ADDRESS } = constants;
 const truffleAssert = require('truffle-assertions');
+const { upgrades, ethers } = require('hardhat');
 
-const GigStatuses = artifacts.require('GigStatuses');
-const DistributedTown = artifacts.require('DistributedTown');
-const Community = artifacts.require('Community');
-const CommunityFactory = artifacts.require('CommunityFactory');
-const SkillWallet = artifacts.require('skill-wallet/contracts/main/SkillWallet');
-const Gigs = artifacts.require('Gigs');
-const AddressProvider = artifacts.require('AddressProvider');
-const metadataUrl = "https://hub.textile.io/thread/bafkwfcy3l745x57c7vy3z2ss6ndokatjllz5iftciq4kpr4ez2pqg3i/buckets/bafzbeiaorr5jomvdpeqnqwfbmn72kdu7vgigxvseenjgwshoij22vopice";
 var BN = web3.utils.BN;
+
+let erc1820;
+let skillWallet;
+let distributedTown;
+let community;
+let community2;
+let gigs;
+let ditoCreditCommunityHolder;
 
 contract('Community', function (accounts) {
 
     before(async function () {
-        this.erc1820 = await singletons.ERC1820Registry(accounts[1]);
-        this.gigStatuses = await GigStatuses.new();
-        AddressProvider.link(this.gigStatuses);
-        this.addressProvder = await AddressProvider.new();
-        this.communityFactory = await CommunityFactory.new(1);
+        [deployer, ...accounts] = await ethers.getSigners();
+        const GigStatuses = await ethers.getContractFactory("GigStatuses");
+        const DistributedTown = await ethers.getContractFactory("DistributedTown");
+        const SkillWallet = await ethers.getContractFactory('SkillWallet');
+        const Community = await ethers.getContractFactory('Community');
+        const CommunityFactory = await ethers.getContractFactory('CommunityFactory');
 
-        this.skillWallet = await SkillWallet.new('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876', { from: accounts[2] });
-        this.distirbutedTown = await DistributedTown.new('http://someurl.co', this.skillWallet.address, this.addressProvder.address, this.communityFactory.address, { from: accounts[2] });
-        await this.distirbutedTown.deployGenesisCommunities(0, { from: accounts[2] });
-        await this.distirbutedTown.deployGenesisCommunities(1, { from: accounts[2] });
-        const communities = await this.distirbutedTown.getCommunities();
-        this.community = await Community.at(communities[0]);
-        this.community2 = await Community.at(communities[1]);
-        this.ditoCreditCommunityHolder = await this.community.ditoCreditsHolder();
-        const gigsAddr = await this.community.gigsAddr();
-        this.gigs = await Gigs.at(gigsAddr);
-        const tx = await this.community.joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)), { from: accounts[3] });
+        erc1820 = await singletons.ERC1820Registry(deployer.address);
+        const gigStatuses = await GigStatuses.deploy();
+        await gigStatuses.deployed();
+
+        const Gigs = await ethers.getContractFactory('Gigs', {
+            libraries: {
+                GigStatuses: gigStatuses.address
+            }
+        });
+        const AddressProvider = await ethers.getContractFactory('AddressProvider', {
+            libraries: {
+                GigStatuses: gigStatuses.address
+            }
+        });
+
+        const addressProvder = await AddressProvider.deploy();
+        const communityFactory = await CommunityFactory.deploy([1]);
+        await addressProvder.deployed();
+
+        skillWallet = await SkillWallet.deploy('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876');
+        await skillWallet.deployed();
+
+        distributedTown = await upgrades.deployProxy(
+            DistributedTown,
+            ['http://someurl.co', skillWallet.address, addressProvder.address, communityFactory.address],
+        );
+
+        await distributedTown.deployed();
+
+        const tx0 = await (await distributedTown.connect(deployer).deployGenesisCommunities(0)).wait();
+        const tx1 = await (await distributedTown.connect(deployer).deployGenesisCommunities(1)).wait();
+        const communities = await distributedTown.getCommunities();
+
+        console.log(communities);
+        community = await Community.attach(communities[0]);
+        community2 = await Community.attach(communities[1]);
+        ditoCreditCommunityHolder = await community.ditoCreditsHolder();
+        const gigsAddr = await community.gigsAddr();
+        gigs = await Gigs.attach(gigsAddr);
         memberAddress = accounts[3];
+        console.log(web3.utils.toWei(new BN(2006)));
+        await (await community
+            .connect(memberAddress)
+            .joinNewMember(
+                'http://someuri.co',
+                web3.utils.toWei(new BN(2006)).toString())
+        ).wait();
     });
     describe('Join new member', async function () {
 
         it("should fail if the user is already a part of the community", async function () {
 
-            const tx = this.community.joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)), { from: memberAddress });
+            const tx = community.connect(memberAddress).joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)).toString());
 
             await truffleAssert.reverts(
                 tx,
@@ -47,43 +83,56 @@ contract('Community', function (accounts) {
             );
         });
         it("should fail if the user is a member of another community", async function () {
-            const tx = this.community2.joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)), { from: memberAddress });
+            const tx = community2.connect(memberAddress).joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)).toString());
             await truffleAssert.reverts(
                 tx,
                 "There is SkillWallet to be claimed by this address."
             );
         });
         it("should transfer credits correctly", async function () {
-            const userAddress = accounts[6];
-            const creditsHolderBalanceBefore = await this.community.balanceOf(this.ditoCreditCommunityHolder);
-            const tx = await this.community.joinNewMember('http://someuri.co', web3.utils.toWei(new BN(3000)), { from: accounts[6] });
-            const memberAddedEvent = tx.logs[0].event === 'MemberAdded';
-            assert.equal(memberAddedEvent, true);
+            const userAccount = accounts[6];
+            const userAddress = userAccount.address;
 
-            await this.skillWallet.claim({ from: accounts[6]});
+            const creditsHolderBalanceBefore = await community.balanceOf(ditoCreditCommunityHolder);
+            const tx = await (await community
+                .connect(userAccount)
+                .joinNewMember(
+                    'http://someuri.co',
+                    web3.utils.toWei(new BN(3000).toString())
+                ))
+                .wait();
+            const memberAddedEvent = tx.events.find(e => e.event == 'MemberAdded');
 
-            const memberBalance = await this.community.balanceOf(userAddress);
-            assert.equal(memberBalance.toString(), web3.utils.toWei(new BN(3000)).toString());
+            assert.isNotNull(memberAddedEvent)
 
-            const creditsHolderBalanceAfter = await this.community.balanceOf(this.ditoCreditCommunityHolder);
+            await (
+                await skillWallet.connect(userAccount).claim()
+            ).wait()
+
+            const memberBalance = await community.balanceOf(userAddress);
+            assert.equal(
+                memberBalance.toString(), 
+                web3.utils.toWei(new BN(3000)).toString());
+
+            const creditsHolderBalanceAfter = await community.balanceOf(ditoCreditCommunityHolder);
             assert.equal((+web3.utils.fromWei(creditsHolderBalanceBefore.toString()) - 3000), +web3.utils.fromWei(creditsHolderBalanceAfter.toString()));
-            
-            const tokenId = tx.logs[0].args[1];
-            const membersCount = await this.community.activeMembersCount()
-            const isMember = await this.community.isMember(userAddress)
-            const skillWalletIds = await this.community.getMembers();
-      
-            const skillWalletRegistered = await this.skillWallet.isSkillWalletRegistered(userAddress);
-            const skillWalletId = await this.skillWallet.getSkillWalletIdByOwner(userAddress);
-            const skillWalletActiveCommunity = await this.skillWallet.getActiveCommunity(tokenId);
-            const skillWalletCommunityHistory = await this.skillWallet.getCommunityHistory(tokenId);
-            const skillWalletActivated = await this.skillWallet.isSkillWalletActivated(tokenId);
+
+            const tokenId = memberAddedEvent.args._skillWalletTokenId;
+            const membersCount = await community.activeMembersCount()
+            const isMember = await community.isMember(userAddress)
+            const skillWalletIds = await community.getMembers();
+
+            const skillWalletRegistered = await skillWallet.isSkillWalletRegistered(userAddress);
+            const skillWalletId = await skillWallet.getSkillWalletIdByOwner(userAddress);
+            const skillWalletActiveCommunity = await skillWallet.getActiveCommunity(tokenId);
+            const skillWalletCommunityHistory = await skillWallet.getCommunityHistory(tokenId);
+            const skillWalletActivated = await skillWallet.isSkillWalletActivated(tokenId);
 
             assert.equal(skillWalletRegistered, true);
             assert.equal(skillWalletId.toString(), tokenId.toString());
-            assert.equal(skillWalletActiveCommunity, this.community.address);
+            assert.equal(skillWalletActiveCommunity, community.address);
             assert.equal(skillWalletActivated, false);
-            assert.equal(skillWalletCommunityHistory[0], this.community.address);
+            assert.equal(skillWalletCommunityHistory[0], community.address);
             assert.equal(membersCount.toString(), '3');
             assert.equal(isMember, true);
             expect(skillWalletIds[2].toString()).to.eq(tokenId.toString());
