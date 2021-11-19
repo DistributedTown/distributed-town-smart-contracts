@@ -56,38 +56,55 @@ contract('Community', function (accounts) {
         const tx1 = await (await distributedTown.connect(deployer).deployGenesisCommunities(1)).wait();
         const communities = await distributedTown.getCommunities();
 
-        console.log(communities);
         community = await Community.attach(communities[0]);
         community2 = await Community.attach(communities[1]);
         ditoCreditCommunityHolder = await community.ditoCreditsHolder();
         const gigsAddr = await community.gigsAddr();
         gigs = await Gigs.attach(gigsAddr);
         memberAddress = accounts[3];
-        console.log(web3.utils.toWei(new BN(2006)));
-        await (await community
+        const a = await (await community
             .connect(memberAddress)
             .joinNewMember(
                 'http://someuri.co',
                 web3.utils.toWei(new BN(2006)).toString())
         ).wait();
+        console.log(a);
+        const balance = await skillWallet.balanceOf(memberAddress.address);
+        console.log('balance', balance.toString());
+        console.log(a.events[5].args._skillWalletTokenId);
+        const activeCom = await skillWallet.getActiveCommunity(a.events[5].args._skillWalletTokenId);
+        console.log('activeCom', activeCom);
+
     });
     describe('Join new member', async function () {
 
-        it("should fail if the user is already a part of the community", async function () {
+        it("should fail if the user is a member a member of a community", async function () {
+            let tx = community2.connect(memberAddress).joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)).toString());
+            await truffleAssert.reverts(
+                tx,
+                "SkillWallet: There is SkillWallet to be claimed by this address."
+            );
 
-            const tx = community.connect(memberAddress).joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)).toString());
+            // claim
+
+            await (
+                await skillWallet.connect(memberAddress).claim()
+            ).wait()
+
+            tx = community2.connect(memberAddress).joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)).toString());
+            await truffleAssert.reverts(
+                tx,
+                "SkillWallet: There is SkillWallet already registered for this address."
+            );
+
+
+            tx = community.connect(memberAddress).joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)).toString());
 
             await truffleAssert.reverts(
                 tx,
                 "Already a member"
             );
-        });
-        it("should fail if the user is a member of another community", async function () {
-            const tx = community2.connect(memberAddress).joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)).toString());
-            await truffleAssert.reverts(
-                tx,
-                "There is SkillWallet to be claimed by this address."
-            );
+
         });
         it("should transfer credits correctly", async function () {
             const userAccount = accounts[6];
@@ -111,7 +128,7 @@ contract('Community', function (accounts) {
 
             const memberBalance = await community.balanceOf(userAddress);
             assert.equal(
-                memberBalance.toString(), 
+                memberBalance.toString(),
                 web3.utils.toWei(new BN(3000)).toString());
 
             const creditsHolderBalanceAfter = await community.balanceOf(ditoCreditCommunityHolder);
