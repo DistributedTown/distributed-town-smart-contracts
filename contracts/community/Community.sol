@@ -25,8 +25,7 @@ import "./DiToCreditCommunityHolder.sol";
  */
 
 contract Community is ICommunity {
-    //IN_PROGRESS - data migration TO this community is in progress; 
-    //MIGRATED - community is migrated to new version (ownerships are transfered and data can be migrated to new version)
+    uint256 public creditsToTransfer;
 
     uint256 public version;
 
@@ -55,6 +54,7 @@ contract Community is ICommunity {
     // add JSON Schema base URL
     constructor(
         address _distributedTownAddr,
+        bool _isDitoNative,
         string memory _url,
         address _addrProvider,
         uint256 _totalMembersAllowed,
@@ -78,7 +78,13 @@ contract Community is ICommunity {
             gigsAddr = GigsFactory(provider.gigsFactory()).deploy();
             totalMembersAllowed = _totalMembersAllowed;
             claimableSkillWallets = _claimableSkillWallets;
-            _joinNewMember(_distributedTownAddr, _url, 2000 * 1e18);
+
+            if (_isDitoNative) {
+                creditsToTransfer = 2000 * 1e18;
+            } else {
+                creditsToTransfer = 0;
+            }
+            _joinNewMember(_distributedTownAddr, _url, creditsToTransfer);
 
             status = STATUS.ACTIVE;
         } else {
@@ -93,6 +99,7 @@ contract Community is ICommunity {
             gigsAddr = currentCommunity.gigsAddr();
             totalMembersAllowed = currentCommunity.totalMembersAllowed();
             claimableSkillWallets = currentCommunity.claimableSkillWallets();
+            creditsToTransfer = currentCommunity.creditsToTransfer();
 
             status = STATUS.IN_PROGRESS;
             migratedFrom = _migrateFrom;
@@ -137,6 +144,9 @@ contract Community is ICommunity {
     }
 
     function joinNewMember(string memory uri, uint256 credits) public override {
+        if (creditsToTransfer == 0) {
+            credits = 0;
+        }
         _joinNewMember(msg.sender, uri, credits);
     }
 
@@ -168,13 +178,17 @@ contract Community is ICommunity {
             token = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
 
         DITOCredit(ditoCreditsAddr).addToWhitelist(newMemberAddress);
-        DITOCredit(ditoCreditsAddr).operatorSend(
-            ditoCreditsHolder,
-            newMemberAddress,
-            credits,
-            "",
-            ""
-        );
+
+        if (credits > 0) {
+            DITOCredit(ditoCreditsAddr).operatorSend(
+                ditoCreditsHolder,
+                newMemberAddress,
+                credits,
+                "",
+                ""
+            );
+        }
+        
 
         skillWalletIds.push(token);
         memberAddresses.push(newMemberAddress);
