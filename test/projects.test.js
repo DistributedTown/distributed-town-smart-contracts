@@ -1,13 +1,14 @@
 const { singletons, constants } = require('@openzeppelin/test-helpers')
 const { assert } = require('chai')
 const truffleAssert = require('truffle-assertions')
+const { upgrades, ethers } = require('hardhat')
 
 const MockOracle = artifacts.require('skill-wallet/contracts/mocks/MockOracle')
 const LinkToken = artifacts.require('skill-wallet/contracts/mocks/LinkToken')
 const SkillWallet = artifacts.require('skill-wallet/contracts/main/SkillWallet')
 
 const GigStatuses = artifacts.require('GigStatuses')
-const DistributedTown = artifacts.require('DistributedTown')
+//const DistributedTown = artifacts.require('DistributedTown')
 const Community = artifacts.require('Community')
 const AddressProvider = artifacts.require('AddressProvider')
 const Projects = artifacts.require('Projects')
@@ -34,15 +35,19 @@ contract('Projects', function ([_, registryFunder, creator, member]) {
       { from: creator },
     )
 
-    this.distirbutedTown = await DistributedTown.new(
-      'http://someurl.co',
-      this.skillWallet.address,
-      this.addressProvder.address,
-      this.communityFactory.address,
-      { from: creator },
-    )
-    await this.distirbutedTown.deployGenesisCommunities(0, { from: creator })
-    await this.distirbutedTown.deployGenesisCommunities(1, { from: creator })
+    const DistributedTown = await ethers.getContractFactory("DistributedTown", creator);
+    this.distirbutedTown = await upgrades.deployProxy(
+      DistributedTown,
+      [
+        'http://someurl.co',
+        this.skillWallet.address,
+        this.addressProvder.address,
+        this.communityFactory.address
+      ]
+    );
+    
+    await this.distirbutedTown.deployGenesisCommunities(0)
+    await this.distirbutedTown.deployGenesisCommunities(1)
     const communities = await this.distirbutedTown.getCommunities()
     this.community = await Community.at(communities[0])
     this.community1 = await Community.at(communities[1])

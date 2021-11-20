@@ -2,14 +2,13 @@
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155HolderUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "skill-wallet/contracts/main/ISkillWallet.sol";
 
-import "./projects/Projects.sol";
 import "./community/Community.sol";
 import "./community/CommunityFactory.sol";
 import "./IDistributedTown.sol";
@@ -21,39 +20,38 @@ import "./IDistributedTown.sol";
  * @author DistributedTown
  */
 
-contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
+contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistributedTown, OwnableUpgradeable {
     event CommunityCreated(
         address communityContract,
         uint communityId,
         uint template,
         address indexed creator
     );
-    using Counters for Counters.Counter;
+    using CountersUpgradeable for CountersUpgradeable.Counter;
 
-    Counters.Counter private communityTokenIds;
+    CountersUpgradeable.Counter private communityTokenIds;
 
     mapping(address => uint) public communityAddressToTokenID;
     mapping(uint => uint) public communityToTemplate;
     mapping(address => address) public ownerToCommunity;
     mapping(address => bool) public isDiToNativeCommunity;
     address[] public communities;
-    address public projectsAddress;
     address public skillWalletAddress;
     address public communityFactoryAddress;
     address addressProvider;
     address partnersRegistryAddress;
 
     // TODO Add JSON Schema base URL
-    constructor(
-        string memory _url,
+    function initialize(
+         string memory _url,
         address _skillWalletAddress,
         address _addrProvider,
         address _communityFactory
-    ) public ERC1155(_url) {
+    ) public initializer {
+        __Ownable_init();
+        __ERC1155_init(_url);
         // initialize pos values of the 3 templates;
         skillWalletAddress = _skillWalletAddress;
-        Projects projects = new Projects(_skillWalletAddress);
-        projectsAddress = address(projects);
         addressProvider = _addrProvider;
         communityFactoryAddress = _communityFactory;
         //init slots fro genesis communities
@@ -98,7 +96,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
         communityTokenIds.increment();
         uint newItemId = communityTokenIds.current();
 
-        address comAddr = CommunityFactory(communityFactoryAddress).createCommunity(communityMetadata, addressProvider, membersCount, false, address(0));
+        address comAddr = CommunityFactory(communityFactoryAddress).createCommunity(isDiToNative, communityMetadata, addressProvider, membersCount, false, address(0));
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
         ownerToCommunity[owner] = comAddr;
@@ -120,7 +118,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
 
         require(CommunityFactory(communityFactoryAddress).version() > Community(_community).version(), "Already latest version");
 
-        address newComAddr = CommunityFactory(communityFactoryAddress).createCommunity("", address(0), 0, false, _community);
+        address newComAddr = CommunityFactory(communityFactoryAddress).createCommunity(false, "", address(0), 0, false, _community);
 
         Community(_community).markAsMigrated(newComAddr);
         Community(newComAddr).migrateData();
@@ -159,10 +157,11 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
     function deployGenesisCommunities(uint template)
         public
         override
-        onlyOwner
+       onlyOwner
     {
-        require(communities[template] == address(0), "Genesis community for template already deployed");
         require(template >= 0 && template <= 2, "Invalid templateID.");
+        require(communities[template] == address(0), "Genesis community for template already deployed");
+        
         string[3] memory metadata = [
             "https://hub.textile.io/ipfs/bafkreick7p4yms7cmwnmfizmcl5e6cdpij4jsl2pkhk5cejn744uwnziny",
             "https://hub.textile.io/ipfs/bafkreid7jtzhuedeggn5welup7iyxchpqodbyam3yfnt4ey4xwnusr3vbe",
@@ -171,6 +170,7 @@ contract DistributedTown is ERC1155, ERC1155Holder, IDistributedTown, Ownable {
 
         _mint(address(this), template, 1, "");
         address comAddr =  CommunityFactory(communityFactoryAddress).createCommunity(
+            true,
             metadata[template],
             addressProvider,
             24,

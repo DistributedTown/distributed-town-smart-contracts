@@ -2,9 +2,9 @@
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
-import "./Community.sol";
+import "./MockCommunityV2.sol";
 
-contract CommunityFactory {
+contract MockCommunityFactoryV2 {
     //TODO: Change to constant before prod
     uint256 public version;
 
@@ -13,7 +13,6 @@ contract CommunityFactory {
     }
 
     function createCommunity(
-        bool _isDitoNative,
         string memory communityMetadata, 
         address addressProvider, 
         uint256 membersCount,
@@ -21,7 +20,7 @@ contract CommunityFactory {
         address _migrateFrom
     ) public returns (address) {
         address comAddr = address(
-            new Community(msg.sender, _isDitoNative, communityMetadata, addressProvider, membersCount, _claimableSkillWallets, _migrateFrom, version)
+            new MockCommunityV2(msg.sender, communityMetadata, addressProvider, membersCount, _claimableSkillWallets, _migrateFrom, version)
         );
 
         return comAddr;

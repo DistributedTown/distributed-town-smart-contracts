@@ -8,6 +8,7 @@ require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly")
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-truffle5");
+require('@openzeppelin/hardhat-upgrades');
 require('hardhat-contract-sizer');
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
@@ -47,7 +48,7 @@ module.exports = {
 
   networks: {
     localhost: {
-      url: "http://localhost:7545",
+      url: "http://localhost:8545",
       /*
         notice no mnemonic here? it will just use account 0 of the hardhat node to deploy
         (you can put in a mnemonic here to set the deployer locally)
@@ -68,8 +69,9 @@ module.exports = {
       }
     },
     maticTestnet: {
-      url: 'https://rpc-mumbai.maticvigil.com/',
-      gasPrice: 1000000000,
+      url: 'https://matic-mumbai.chainstacklabs.com',
+      gasPrice: 'auto',
+      gas: 'auto',
       accounts: {
         mnemonic: mnemonic(),
       }

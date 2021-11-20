@@ -1,16 +1,16 @@
 /* eslint no-use-before-define: "warn" */
 const chalk = require("chalk");
-const { ethers } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 const { deploy } = require("./utils")
 
+
 const main = async () => {
-    const deployerWallet = ethers.provider.getSigner();
-    const deployerWalletAddress = await deployerWallet.getAddress();
-    // const skillWalletAddress = "0x301214E981aAE83163A70266832748fB2D030156";
-    const skillWalletAddress = '0xC048276176B8D6541ac0b39B853067202b571E08';
     console.log("\n\n 📡 Deploying...\n");
-    const gigStatuses = await deploy('GigStatuses');
+    const GigStatuses = await ethers.getContractFactory('GigStatuses');
+    const gigStatuses = await GigStatuses.deploy();
     await gigStatuses.deployed();
+    console.log('gigStatusesAddress', gigStatuses.address)
+    const skillWalletAddress = '0x044F5A0F1fEE8cEa95Da4574de375A4Ea1DF39EF';
 
     const addressProvider = await deploy('AddressProvider', [], {},
     {
@@ -19,16 +19,31 @@ const main = async () => {
     const comFactory = await deploy('CommunityFactory', ['1'], {});
       
     await addressProvider.deployed();
-    const distributedTown = await deploy("DistributedTown", ['http://someurl.io', skillWalletAddress, addressProvider.address, comFactory.address]);
+
+    const communityFactory = await deploy('CommunityFactory', [1], {});
+
+    const DistributedTown = await ethers.getContractFactory('DistributedTown');
+
+    const distributedTown = await upgrades.deployProxy(DistributedTown, [
+        'http://someurl.io', 
+        skillWalletAddress, 
+        addressProvider.address,
+        communityFactory.address
+    ], {
+        gasLimit: 9500000
+    });
     await distributedTown.deployed();
+
     const a = await distributedTown.deployGenesisCommunities(0);
-    await distributedTown.deployGenesisCommunities(1);
-    await distributedTown.deployGenesisCommunities(2);
+    // await distributedTown.deployGenesisCommunities(1);
+    // await distributedTown.deployGenesisCommunities(2);
+    console.log(await a.wait());
     console.log(a);
 
     const coms = await distributedTown.getCommunities();
     console.log(coms);
 
+    console.log('DistributedTown deployed to:', distributedTown.address);
     console.log(
         " 💾  Artifacts (address, abi, and args) saved to: ",
         chalk.blue("packages/hardhat/artifacts/"),

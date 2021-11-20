@@ -1,29 +1,29 @@
 /* eslint no-use-before-define: "warn" */
 const { ethers } = require("hardhat");
 
-const TEMPLATE = 2;
-const CHECK_V2 = true;
+const TEMPLATE = 0;
 
 const main = async () => {
-    //const distributedTownAddress = "0xB9e653Ef004D0f3577f1373a124bADfbA487Ce2A";
     const distributedTownAddress = "0x351A579a3b5f35B874b20ff710A555252D25d1c9";
 
     const distributedTownFactory = await ethers.getContractFactory("DistributedTown");
     const distributedTownContract = await distributedTownFactory.attach(distributedTownAddress);
+    const communityAddress = await distributedTownContract.communities(TEMPLATE);
+    const currentCommunity = await ethers.getContractAt("Community", communityAddress);
 
-    const a = await distributedTownContract.deployGenesisCommunities(TEMPLATE);
+    console.log("Current community version at address ", communityAddress, " is ", String(await currentCommunity.version()));
+
+    const a = await distributedTownContract.migrateCommunity(communityAddress);
     console.log(a);
     console.log(await a.wait());
 
     const newCommunityAddress = await distributedTownContract.communities(TEMPLATE);
     const newCommunity = await ethers.getContractAt("Community", newCommunityAddress);
-    console.log("Deployed community: address ", newCommunityAddress, ", version ", String(await newCommunity.version()));
+    console.log("New community version at address ", newCommunityAddress, " is ", String(await newCommunity.version()));
 
-    if(CHECK_V2) {
-        const mockCommunityV2 = await ethers.getContractAt("MockCommunityV2", newCommunityAddress);
+    const mockCommunityV2 = await ethers.getContractAt("MockCommunityV2", newCommunityAddress);
 
-        console.log("Checking new function of updated community: ", await mockCommunityV2.v2Function());
-    }
+    console.log("Checking new function of updated community: ", await mockCommunityV2.v2Function());
     // await distributedTownContract.deployGenesisCommunities(1, {
     //     // The maximum units of gas for the transaction to use
     //     gasLimit: 2300000
