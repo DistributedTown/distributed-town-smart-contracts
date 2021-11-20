@@ -62,18 +62,12 @@ contract('Community', function (accounts) {
         const gigsAddr = await community.gigsAddr();
         gigs = await Gigs.attach(gigsAddr);
         memberAddress = accounts[3];
-        const a = await (await community
+        await (await community
             .connect(memberAddress)
             .joinNewMember(
                 'http://someuri.co',
                 web3.utils.toWei(new BN(2006)).toString())
         ).wait();
-        console.log(a);
-        const balance = await skillWallet.balanceOf(memberAddress.address);
-        console.log('balance', balance.toString());
-        console.log(a.events[5].args._skillWalletTokenId);
-        const activeCom = await skillWallet.getActiveCommunity(a.events[5].args._skillWalletTokenId);
-        console.log('activeCom', activeCom);
 
     });
     describe('Join new member', async function () {
