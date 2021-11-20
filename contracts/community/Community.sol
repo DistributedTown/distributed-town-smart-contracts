@@ -25,6 +25,8 @@ import "./DiToCreditCommunityHolder.sol";
  */
 
 contract Community is ICommunity {
+    //IN_PROGRESS - data migration TO this community is in progress;
+    //MIGRATED - community is migrated to new version (ownerships are transfered and data can be migrated to new version)
     uint256 public creditsToTransfer;
 
     uint256 public version;
@@ -40,7 +42,6 @@ contract Community is ICommunity {
     uint256[] public skillWalletIds;
     uint256 public tokenId;
     address[] public memberAddresses;
-    mapping(address => bool) public isMember;
 
     address public distributedTownAddr;
     address public ditoCreditsAddr;
@@ -89,7 +90,10 @@ contract Community is ICommunity {
             status = STATUS.ACTIVE;
         } else {
             Community currentCommunity = Community(_migrateFrom);
-            require(currentCommunity.status() == STATUS.ACTIVE, "Community not active");
+            require(
+                currentCommunity.status() == STATUS.ACTIVE,
+                "Community not active"
+            );
 
             metadataUri = currentCommunity.metadataUri();
             distributedTownAddr = currentCommunity.distributedTownAddr();
@@ -104,7 +108,7 @@ contract Community is ICommunity {
             status = STATUS.IN_PROGRESS;
             migratedFrom = _migrateFrom;
         }
-        
+
         version = _version;
     }
 
@@ -112,19 +116,18 @@ contract Community is ICommunity {
         require(status == STATUS.IN_PROGRESS, "Migration is not in progress");
 
         Community currentCommunity = Community(migratedFrom);
-        require(currentCommunity.status() == STATUS.MIGRATED, "Community not migrated");
+        require(
+            currentCommunity.status() == STATUS.MIGRATED,
+            "Community not migrated"
+        );
 
-        memberAddresses = currentCommunity.getMemberAddresses(); 
-        skillWalletIds = currentCommunity.getMembers(); 
+        memberAddresses = currentCommunity.getMemberAddresses();
+        skillWalletIds = currentCommunity.getMembers();
         projectIds = currentCommunity.getProjects();
 
         activeMembersCount = currentCommunity.activeMembersCount();
         scarcityScore = currentCommunity.scarcityScore();
         tokenId = currentCommunity.tokenId();
-
-        for (uint256 i = 0; i < memberAddresses.length; i++) {
-            isMember[memberAddresses[i]] = true;
-        }
 
         status = STATUS.ACTIVE;
     }
@@ -133,7 +136,10 @@ contract Community is ICommunity {
     function markAsMigrated(address _migratedTo) public {
         require(msg.sender == distributedTownAddr, "Caller not dito");
         require(status == STATUS.ACTIVE, "Community not active");
-        require(Community(_migratedTo).status() == STATUS.IN_PROGRESS, "Migration si not in progress");
+        require(
+            Community(_migratedTo).status() == STATUS.IN_PROGRESS,
+            "Migration si not in progress"
+        );
 
         DITOCredit(ditoCreditsAddr).transferOwnership(_migratedTo);
         Treasury(treasuryAddr).setCommunityAddress(_migratedTo);
@@ -151,13 +157,17 @@ contract Community is ICommunity {
     }
 
     // check if it's called only from deployer.
-    function _joinNewMember(address _member, string memory uri, uint256 credits) private {
+    function _joinNewMember(
+        address _member,
+        string memory uri,
+        uint256 credits
+    ) private {
         require(
             activeMembersCount <= totalMembersAllowed,
             "No free spots left!"
         );
-        
-        require(!isMember[_member], "Already a member");
+
+        require(!isMember(_member), "Already a member");
 
         // the DiTo contract can only join the treasury as a member of the community
         address newMemberAddress = _member == distributedTownAddr
@@ -168,14 +178,15 @@ contract Community is ICommunity {
             DistributedTown(distributedTownAddr).skillWalletAddress()
         );
 
-        bool claimableSW = address(this) == _member ? false : claimableSkillWallets;
+        bool claimableSW = address(this) == _member
+            ? false
+            : claimableSkillWallets;
         skillWallet.create(newMemberAddress, uri, claimableSW);
 
         uint256 token = 0;
         if (claimableSkillWallets)
             token = skillWallet.getClaimableSkillWalletId(newMemberAddress);
-        else 
-            token = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
+        else token = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
 
         DITOCredit(ditoCreditsAddr).addToWhitelist(newMemberAddress);
 
@@ -192,7 +203,6 @@ contract Community is ICommunity {
 
         skillWalletIds.push(token);
         memberAddresses.push(newMemberAddress);
-        isMember[newMemberAddress] = true;
         activeMembersCount++;
 
         emit MemberAdded(newMemberAddress, token, credits);
@@ -209,14 +219,13 @@ contract Community is ICommunity {
         );
         address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
 
-        require(!isMember[skillWalletAddress], "You have already joined!");
+        require(!isMember(skillWalletAddress), "You have already joined!");
 
         // require(
         //     msg.sender == skillWalletAddress,
         //     "Only the skill wallet owner can call this function"
         // );
 
-        isMember[skillWalletAddress] = true;
         skillWalletIds[activeMembersCount] = skillWalletTokenId;
         // skillWalletIds[1] = 123;
         activeMembersCount++;
@@ -297,7 +306,7 @@ contract Community is ICommunity {
 
     function balanceOf(address member) public view override returns (uint256) {
         require(
-            isMember[member] || ditoCreditsHolder == member,
+            isMember(member) || ditoCreditsHolder == member,
             "Not a member of the community"
         );
         return DITOCredit(ditoCreditsAddr).balanceOf(member);
@@ -314,5 +323,21 @@ contract Community is ICommunity {
 
     function getSkillWalletAddress() public override returns (address) {
         return DistributedTown(distributedTownAddr).skillWalletAddress();
+    }
+
+    function isMember(address member) public view override returns (bool) {
+        ISkillWallet skillWallet = ISkillWallet(
+            DistributedTown(distributedTownAddr).skillWalletAddress()
+        );
+
+        uint256 balance = skillWallet.balanceOf(member);
+        if (balance == 0) return false;
+        uint256 skillWalletID = skillWallet.getSkillWalletIdByOwner(member);
+        if (skillWalletID > 0) {
+            return
+                skillWallet.getActiveCommunity(skillWalletID) == address(this);
+        } else {
+            return false;
+        }
     }
 }

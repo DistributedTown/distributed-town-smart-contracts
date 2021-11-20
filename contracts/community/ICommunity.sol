@@ -56,4 +56,6 @@ interface ICommunity {
     function transferCredits(address to, uint256 amount) external;
 
     function getSkillWalletAddress() external returns(address);
+    
+    function isMember(address member) external view returns(bool);
 }

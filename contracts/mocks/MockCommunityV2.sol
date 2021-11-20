@@ -41,7 +41,6 @@ contract MockCommunityV2 is ICommunity {
     uint256[] public skillWalletIds;
     uint256 public tokenId;
     address[] public memberAddresses;
-    mapping(address => bool) public isMember;
 
     address public distributedTownAddr;
     address public ditoCreditsAddr;
@@ -119,10 +118,6 @@ contract MockCommunityV2 is ICommunity {
         scarcityScore = currentCommunity.scarcityScore();
         tokenId = currentCommunity.tokenId();
 
-        for (uint256 i = 0; i < memberAddresses.length; i++) {
-            isMember[memberAddresses[i]] = true;
-        }
-
         status = STATUS.ACTIVE;
     }
 
@@ -151,7 +146,7 @@ contract MockCommunityV2 is ICommunity {
             "No free spots left!"
         );
         
-        require(!isMember[_member], "Already a member");
+        require(!isMember(_member), "Already a member");
 
         // the DiTo contract can only join the treasury as a member of the community
         address newMemberAddress = _member == distributedTownAddr
@@ -182,7 +177,6 @@ contract MockCommunityV2 is ICommunity {
 
         skillWalletIds.push(token);
         memberAddresses.push(newMemberAddress);
-        isMember[newMemberAddress] = true;
         activeMembersCount++;
 
         emit MemberAdded(newMemberAddress, token, credits);
@@ -199,14 +193,13 @@ contract MockCommunityV2 is ICommunity {
         );
         address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
 
-        require(!isMember[skillWalletAddress], "You have already joined!");
+        require(!isMember(skillWalletAddress), "You have already joined!");
 
         // require(
         //     msg.sender == skillWalletAddress,
         //     "Only the skill wallet owner can call this function"
         // );
 
-        isMember[skillWalletAddress] = true;
         skillWalletIds[activeMembersCount] = skillWalletTokenId;
         // skillWalletIds[1] = 123;
         activeMembersCount++;
@@ -287,7 +280,7 @@ contract MockCommunityV2 is ICommunity {
 
     function balanceOf(address member) public view override returns (uint256) {
         require(
-            isMember[member] || ditoCreditsHolder == member,
+            isMember(member) || ditoCreditsHolder == member,
             "Not a member of the community"
         );
         return DITOCredit(ditoCreditsAddr).balanceOf(member);
@@ -304,5 +297,16 @@ contract MockCommunityV2 is ICommunity {
 
     function getSkillWalletAddress() public override returns (address) {
         return DistributedTown(distributedTownAddr).skillWalletAddress();
+    }
+
+    
+    function isMember(address member) public view override returns (bool) {
+        ISkillWallet skillWallet = ISkillWallet(
+            DistributedTown(distributedTownAddr).skillWalletAddress()
+        );
+        return
+            skillWallet.getActiveCommunity(
+                skillWallet.getSkillWalletIdByOwner(member)
+            ) == address(this);
     }
 }
