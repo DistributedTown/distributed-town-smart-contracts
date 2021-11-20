@@ -199,7 +199,6 @@ contract Community is ICommunity {
                 ""
             );
         }
-        
 
         skillWalletIds.push(token);
         memberAddresses.push(newMemberAddress);
@@ -323,6 +322,11 @@ contract Community is ICommunity {
 
     function getSkillWalletAddress() public override returns (address) {
         return DistributedTown(distributedTownAddr).skillWalletAddress();
+    }
+
+    //TODO check if the user has the permissions
+    function setMetadataUri(string calldata uri) public override {
+        metadataUri = uri;
     }
 
     function isMember(address member) public view override returns (bool) {

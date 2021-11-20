@@ -13,9 +13,11 @@ const main = async () => {
     const skillWalletAddress = '0x044F5A0F1fEE8cEa95Da4574de375A4Ea1DF39EF';
 
     const addressProvider = await deploy('AddressProvider', [], {},
-        {
-            GigStatuses: gigStatuses.address
-        });
+    {
+        GigStatuses: gigStatuses.address
+    });
+    const comFactory = await deploy('CommunityFactory', ['1'], {});
+      
     await addressProvider.deployed();
 
     const communityFactory = await deploy('CommunityFactory', [1], {});
