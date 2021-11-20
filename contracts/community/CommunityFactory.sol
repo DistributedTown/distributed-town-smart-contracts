@@ -13,6 +13,7 @@ contract CommunityFactory {
     }
 
     function createCommunity(
+        bool _isDitoNative,
         string memory communityMetadata, 
         address addressProvider, 
         uint256 membersCount,
@@ -20,7 +21,7 @@ contract CommunityFactory {
         address _migrateFrom
     ) public returns (address) {
         address comAddr = address(
-            new Community(msg.sender, communityMetadata, addressProvider, membersCount, _claimableSkillWallets, _migrateFrom, version)
+            new Community(msg.sender, _isDitoNative, communityMetadata, addressProvider, membersCount, _claimableSkillWallets, _migrateFrom, version)
         );
 
         return comAddr;

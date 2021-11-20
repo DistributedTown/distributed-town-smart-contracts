@@ -96,7 +96,7 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
         communityTokenIds.increment();
         uint newItemId = communityTokenIds.current();
 
-        address comAddr = CommunityFactory(communityFactoryAddress).createCommunity(communityMetadata, addressProvider, membersCount, false, address(0));
+        address comAddr = CommunityFactory(communityFactoryAddress).createCommunity(isDiToNative, communityMetadata, addressProvider, membersCount, false, address(0));
         communityAddressToTokenID[comAddr] = newItemId;
         communityToTemplate[newItemId] = template;
         ownerToCommunity[owner] = comAddr;
@@ -118,7 +118,7 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
 
         require(CommunityFactory(communityFactoryAddress).version() > Community(_community).version(), "Already latest version");
 
-        address newComAddr = CommunityFactory(communityFactoryAddress).createCommunity("", address(0), 0, false, _community);
+        address newComAddr = CommunityFactory(communityFactoryAddress).createCommunity(false, "", address(0), 0, false, _community);
 
         Community(_community).markAsMigrated(newComAddr);
         Community(newComAddr).migrateData();
@@ -170,6 +170,7 @@ contract DistributedTown is ERC1155Upgradeable, ERC1155HolderUpgradeable, IDistr
 
         _mint(address(this), template, 1, "");
         address comAddr =  CommunityFactory(communityFactoryAddress).createCommunity(
+            true,
             metadata[template],
             addressProvider,
             24,
