@@ -3,7 +3,6 @@ pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
 import "skill-wallet/contracts/main/ISkillWallet.sol";
-import "skill-wallet/contracts/mocks/MockOracle.sol";
 import "skill-wallet/contracts/main/utils/RoleUtils.sol";
 
 import "./ICommunity.sol";

@@ -145,11 +145,7 @@ contract MockCommunityV2 is ICommunity {
         status = STATUS.MIGRATED;
     }
 
-    function joinNewMember(
-        string memory uri,
-        uint256 role,
-        uint256 credits
-    ) public override {
+    function joinNewMember(string memory uri, uint role, uint256 credits) public override {
         _joinNewMember(msg.sender, uri, role, credits);
     }
 
@@ -179,12 +175,7 @@ contract MockCommunityV2 is ICommunity {
         bool claimableSW = address(this) == _member
             ? false
             : claimableSkillWallets;
-        skillWallet.create(
-            newMemberAddress,
-            uri,
-            RoleUtils.Roles(role),
-            claimableSW
-        );
+        skillWallet.create(newMemberAddress, uri, RoleUtils.Roles(role), claimableSW);
 
         uint256 token = 0;
         if (claimableSkillWallets)
@@ -206,6 +197,8 @@ contract MockCommunityV2 is ICommunity {
 
         emit MemberAdded(newMemberAddress, token, credits);
     }
+
+
 
     function getMembers() public view override returns (uint256[] memory) {
         return skillWalletIds;

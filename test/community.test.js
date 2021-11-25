@@ -42,7 +42,12 @@ contract('Community', function (accounts) {
         const communityFactory = await CommunityFactory.deploy([1]);
         await addressProvder.deployed();
 
-        skillWallet = await SkillWallet.deploy('0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876');
+
+        skillWallet = await upgrades.deployProxy(
+            SkillWallet,
+            ['0x64307b67314b584b1E3Be606255bd683C835A876', '0x64307b67314b584b1E3Be606255bd683C835A876'],
+        );
+
         await skillWallet.deployed();
 
         distributedTown = await upgrades.deployProxy(
@@ -66,6 +71,7 @@ contract('Community', function (accounts) {
             .connect(memberAddress)
             .joinNewMember(
                 'http://someuri.co',
+                1,
                 web3.utils.toWei(new BN(2006)).toString())
         ).wait();
 
@@ -73,7 +79,7 @@ contract('Community', function (accounts) {
     describe('Join new member', async function () {
 
         it("should fail if the user is a member a member of a community", async function () {
-            let tx = community2.connect(memberAddress).joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)).toString());
+            let tx = community2.connect(memberAddress).joinNewMember('http://someuri.co',1, web3.utils.toWei(new BN(2006)).toString());
             await truffleAssert.reverts(
                 tx,
                 "SkillWallet: There is SkillWallet to be claimed by this address."
@@ -85,14 +91,14 @@ contract('Community', function (accounts) {
                 await skillWallet.connect(memberAddress).claim()
             ).wait()
 
-            tx = community2.connect(memberAddress).joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)).toString());
+            tx = community2.connect(memberAddress).joinNewMember('http://someuri.co',1, web3.utils.toWei(new BN(2006)).toString());
             await truffleAssert.reverts(
                 tx,
                 "SkillWallet: There is SkillWallet already registered for this address."
             );
 
 
-            tx = community.connect(memberAddress).joinNewMember('http://someuri.co', web3.utils.toWei(new BN(2006)).toString());
+            tx = community.connect(memberAddress).joinNewMember('http://someuri.co',1, web3.utils.toWei(new BN(2006)).toString());
 
             await truffleAssert.reverts(
                 tx,
@@ -109,6 +115,7 @@ contract('Community', function (accounts) {
                 .connect(userAccount)
                 .joinNewMember(
                     'http://someuri.co',
+                    1,
                     web3.utils.toWei(new BN(3000).toString())
                 ))
                 .wait();
