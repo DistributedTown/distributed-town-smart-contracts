@@ -49,7 +49,7 @@ contract('DistributedTown', function (
 
     describe('Deploy Genesis Communities', async function () {
         
-        it("create genesis community", async function () {
+        it.only("create genesis community", async function () {
             const tx0 = await (await distributedTown.connect(deployer).deployGenesisCommunities(0)).wait();
             const comCreated0 = tx0.events.find(e => e.event == 'CommunityCreated');
 

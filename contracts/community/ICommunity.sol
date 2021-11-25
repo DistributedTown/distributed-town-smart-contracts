@@ -26,12 +26,9 @@ interface ICommunity {
     // check if it's called only from deployer.
     function joinNewMember(
         string memory uri,
+        uint256 role,
         uint256 credits
     ) external;
-
-    function join(uint256 skillWalletTokenId, uint256 credits) external;
-
-    function leave(address memberAddress) external;
 
     function getMembers() external view returns (uint256[] memory);
     

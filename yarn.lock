@@ -9423,10 +9423,10 @@ simple-get@^2.7.0:
     once "^1.3.1"
     simple-concat "^1.0.0"
 
-skill-wallet@0.0.5-beta:
-  version "0.0.5-beta"
-  resolved "https://registry.yarnpkg.com/skill-wallet/-/skill-wallet-0.0.5-beta.tgz#8d9cc36bf0d9ba31ab5b868953b95220910c92d2"
-  integrity sha512-DY4wIGQwSjGN+6qbyRuKNoC68Ri0dAF8qMMAZIvXiz3iGh8m/a9dBjFvl7ohJkJcJ/aX/PgFgQhQbUnMGPtjNA==
+skill-wallet@0.0.6-beta:
+  version "0.0.6-beta"
+  resolved "https://registry.yarnpkg.com/skill-wallet/-/skill-wallet-0.0.6-beta.tgz#a65a738bff73825295d7532e02a38739aab57ee5"
+  integrity sha512-vbxnpCTBHIA93VEUeyNalS2J098V2tnU8r8dqWPU6YeyMfJhEIZPZqcqHn8GabYOBNFN4hT4MSQWSD5Zco6GGQ==
   dependencies:
     "@chainlink/contracts" "^0.1.7"
     "@chainlink/token" "^1.1.0"
@@ -9435,6 +9435,7 @@ skill-wallet@0.0.5-beta:
     "@nomiclabs/hardhat-waffle" "^2.0.0"
     "@openzeppelin/contracts" "3.4.2"
     "@openzeppelin/contracts-upgradeable" "^3.4.2"
+    "@openzeppelin/hardhat-upgrades" "^1.10.0"
     "@tenderly/hardhat-tenderly" "^1.0.10"
     chai "^4.2.0"
     chalk "^4.1.0"
