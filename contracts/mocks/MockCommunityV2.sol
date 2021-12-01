@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "skill-wallet/contracts/main/ISkillWallet.sol";
 import "skill-wallet/contracts/mocks/MockOracle.sol";
+import "skill-wallet/contracts/main/utils/RoleUtils.sol";
 
 import "../community/ICommunity.sol";
 import "../community/Treasury.sol";
@@ -25,7 +26,7 @@ import "../community/DiToCreditCommunityHolder.sol";
  */
 
 contract MockCommunityV2 is ICommunity {
-    //IN_PROGRESS - data migration TO this community is in progress; 
+    //IN_PROGRESS - data migration TO this community is in progress;
     //MIGRATED - community is migrated to new version (ownerships are transfered and data can be migrated to new version)
 
     uint256 public version;
@@ -77,12 +78,15 @@ contract MockCommunityV2 is ICommunity {
             gigsAddr = GigsFactory(provider.gigsFactory()).deploy();
             totalMembersAllowed = _totalMembersAllowed;
             claimableSkillWallets = _claimableSkillWallets;
-            _joinNewMember(_distributedTownAddr, _url, 2000 * 1e18);
+            _joinNewMember(_distributedTownAddr, _url, 1, 2000 * 1e18);
 
             status = STATUS.ACTIVE;
         } else {
             Community currentCommunity = Community(_migrateFrom);
-            require(currentCommunity.status() == STATUS.ACTIVE, "Community not active");
+            require(
+                currentCommunity.status() == STATUS.ACTIVE,
+                "Community not active"
+            );
 
             metadataUri = currentCommunity.metadataUri();
             distributedTownAddr = currentCommunity.distributedTownAddr();
@@ -96,7 +100,7 @@ contract MockCommunityV2 is ICommunity {
             status = STATUS.IN_PROGRESS;
             migratedFrom = _migrateFrom;
         }
-        
+
         version = _version;
     }
 
@@ -108,10 +112,13 @@ contract MockCommunityV2 is ICommunity {
         require(status == STATUS.IN_PROGRESS, "Migration is not in progress");
 
         Community currentCommunity = Community(migratedFrom);
-        require(currentCommunity.status() == STATUS.MIGRATED, "Community not migrated");
+        require(
+            currentCommunity.status() == STATUS.MIGRATED,
+            "Community not migrated"
+        );
 
-        memberAddresses = currentCommunity.getMemberAddresses(); 
-        skillWalletIds = currentCommunity.getMembers(); 
+        memberAddresses = currentCommunity.getMemberAddresses();
+        skillWalletIds = currentCommunity.getMembers();
         projectIds = currentCommunity.getProjects();
 
         activeMembersCount = currentCommunity.activeMembersCount();
@@ -125,7 +132,10 @@ contract MockCommunityV2 is ICommunity {
     function markAsMigrated(address _migratedTo) public {
         require(msg.sender == distributedTownAddr, "Caller not dito");
         require(status == STATUS.ACTIVE, "Community not active");
-        require(Community(_migratedTo).status() == STATUS.IN_PROGRESS, "Migration si not in progress");
+        require(
+            Community(_migratedTo).status() == STATUS.IN_PROGRESS,
+            "Migration si not in progress"
+        );
 
         DITOCredit(ditoCreditsAddr).transferOwnership(_migratedTo);
         Treasury(treasuryAddr).setCommunityAddress(_migratedTo);
@@ -135,17 +145,22 @@ contract MockCommunityV2 is ICommunity {
         status = STATUS.MIGRATED;
     }
 
-    function joinNewMember(string memory uri, uint256 credits) public override {
-        _joinNewMember(msg.sender, uri, credits);
+    function joinNewMember(string memory uri, uint role, uint256 credits) public override {
+        _joinNewMember(msg.sender, uri, role, credits);
     }
 
     // check if it's called only from deployer.
-    function _joinNewMember(address _member, string memory uri, uint256 credits) private {
+    function _joinNewMember(
+        address _member,
+        string memory uri,
+        uint256 role,
+        uint256 credits
+    ) private {
         require(
             activeMembersCount <= totalMembersAllowed,
             "No free spots left!"
         );
-        
+
         require(!isMember(_member), "Already a member");
 
         // the DiTo contract can only join the treasury as a member of the community
@@ -157,14 +172,15 @@ contract MockCommunityV2 is ICommunity {
             DistributedTown(distributedTownAddr).skillWalletAddress()
         );
 
-        bool claimableSW = address(this) == _member ? false : claimableSkillWallets;
-        skillWallet.create(newMemberAddress, uri, claimableSW);
+        bool claimableSW = address(this) == _member
+            ? false
+            : claimableSkillWallets;
+        skillWallet.create(newMemberAddress, uri, RoleUtils.Roles(role), claimableSW);
 
         uint256 token = 0;
         if (claimableSkillWallets)
             token = skillWallet.getClaimableSkillWalletId(newMemberAddress);
-        else 
-            token = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
+        else token = skillWallet.getSkillWalletIdByOwner(newMemberAddress);
 
         DITOCredit(ditoCreditsAddr).addToWhitelist(newMemberAddress);
         DITOCredit(ditoCreditsAddr).operatorSend(
@@ -182,37 +198,7 @@ contract MockCommunityV2 is ICommunity {
         emit MemberAdded(newMemberAddress, token, credits);
     }
 
-    function join(uint256 skillWalletTokenId, uint256 credits) public override {
-        require(
-            activeMembersCount <= totalMembersAllowed,
-            "No free spots left!"
-        );
 
-        ISkillWallet skillWallet = ISkillWallet(
-            DistributedTown(distributedTownAddr).skillWalletAddress()
-        );
-        address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
-
-        require(!isMember(skillWalletAddress), "You have already joined!");
-
-        // require(
-        //     msg.sender == skillWalletAddress,
-        //     "Only the skill wallet owner can call this function"
-        // );
-
-        skillWalletIds[activeMembersCount] = skillWalletTokenId;
-        // skillWalletIds[1] = 123;
-        activeMembersCount++;
-
-        DITOCredit(ditoCreditsAddr).addToWhitelist(skillWalletAddress);
-        DITOCredit(ditoCreditsAddr).transfer(skillWalletAddress, credits);
-
-        emit MemberAdded(skillWalletAddress, skillWalletTokenId, credits);
-    }
-
-    function leave(address memberAddress) public override {
-        emit MemberLeft(memberAddress);
-    }
 
     function getMembers() public view override returns (uint256[] memory) {
         return skillWalletIds;
@@ -299,7 +285,6 @@ contract MockCommunityV2 is ICommunity {
         return DistributedTown(distributedTownAddr).skillWalletAddress();
     }
 
-    
     function isMember(address member) public view override returns (bool) {
         ISkillWallet skillWallet = ISkillWallet(
             DistributedTown(distributedTownAddr).skillWalletAddress()
@@ -308,5 +293,10 @@ contract MockCommunityV2 is ICommunity {
             skillWallet.getActiveCommunity(
                 skillWallet.getSkillWalletIdByOwner(member)
             ) == address(this);
+    }
+
+    //TODO check if the user has the permissions
+    function setMetadataUri(string calldata uri) public override {
+        metadataUri = uri;
     }
 }

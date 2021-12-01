@@ -38,6 +38,7 @@ contract('Gigs', function ([
 
     // SW
     const SkillWallet = await ethers.getContractFactory('SkillWallet');
+    const OSM = await ethers.getContractFactory('OffchainSignatureMechanism');
     const LinkToken = await ethers.getContractFactory("LinkToken");
     const MockOracle = await ethers.getContractFactory("MockOracle");
     const CommunityFactory = await ethers.getContractFactory("CommunityFactory");
@@ -70,9 +71,11 @@ contract('Gigs', function ([
     mockOracle = await MockOracle.deploy(linkTokenMock.address);
     await mockOracle.deployed();
 
-    skillWallet = await SkillWallet.deploy(
-      linkTokenMock.address, mockOracle.address
-    );
+    skillWallet = await upgrades.deployProxy(
+      SkillWallet,
+      [linkTokenMock.address, mockOracle.address],
+  );
+
 
     await skillWallet.deployed();
 
@@ -100,11 +103,14 @@ contract('Gigs', function ([
         const pubKeyEventEmitted = pubKeyTx.events.find(e => e.event == 'PubKeyAddedToSkillWallet');
         assert.isNotNull(pubKeyEventEmitted)
 
+
+        const osm = await OSM.attach(await skillWallet.getOSMAddress());
+
         await linkTokenMock.transfer(
-          skillWallet.address,
+          osm.address,
           '2000000000000000000',
         )
-        const validationTx = await (await skillWallet.validate(
+        const validationTx = await (await osm.validate(
           'signature',
           skillWalletId,
           0,
@@ -118,9 +124,9 @@ contract('Gigs', function ([
 
         const requestId = validationRequestIdSentEventEmitted.args.requestId;
 
-        const fulfilTx = await (await mockOracle.fulfillOracleRequest(
+        const fulfilTx = await (await mockOracle["fulfillOracleRequest(bytes32,bool)"](
           requestId,
-          true,
+          true
         )).wait();
 
         const fulfilTxEventEmitted = fulfilTx.events.find(e => e.event == 'CallbackCalled');
@@ -146,6 +152,7 @@ contract('Gigs', function ([
       .connect(firstMember)
       .joinNewMember(
         'http://someuri.co',
+        1,
         web3.utils.toWei(new BN(2006)).toString(),
       )
     ).wait();
@@ -154,16 +161,19 @@ contract('Gigs', function ([
 
     await (await community.connect(secondMember).joinNewMember(
       'http://someuri.co',
+      1,
       web3.utils.toWei(new BN(2006)).toString(),
     )).wait();
 
     await (await community.connect(thirdMember).joinNewMember(
       'http://someuri.co',
+      1,
       web3.utils.toWei(new BN(2006)).toString(),
     )).wait();
 
     await (await secondCommunity.connect(notAMember).joinNewMember(
       'http://someuri.co',
+      1,
       web3.utils.toWei(new BN(2006)).toString()
     )).wait();
 

@@ -3,7 +3,7 @@ pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
 import "skill-wallet/contracts/main/ISkillWallet.sol";
-import "skill-wallet/contracts/mocks/MockOracle.sol";
+import "skill-wallet/contracts/main/utils/RoleUtils.sol";
 
 import "./ICommunity.sol";
 import "./Treasury.sol";
@@ -85,7 +85,7 @@ contract Community is ICommunity {
             } else {
                 creditsToTransfer = 0;
             }
-            _joinNewMember(_distributedTownAddr, _url, creditsToTransfer);
+            _joinNewMember(_distributedTownAddr, _url, 1, creditsToTransfer);
 
             status = STATUS.ACTIVE;
         } else {
@@ -149,17 +149,22 @@ contract Community is ICommunity {
         status = STATUS.MIGRATED;
     }
 
-    function joinNewMember(string memory uri, uint256 credits) public override {
+    function joinNewMember(
+        string memory uri,
+        uint256 role,
+        uint256 credits
+    ) public override {
         if (creditsToTransfer == 0) {
             credits = 0;
         }
-        _joinNewMember(msg.sender, uri, credits);
+        _joinNewMember(msg.sender, uri, role, credits);
     }
 
     // check if it's called only from deployer.
     function _joinNewMember(
         address _member,
         string memory uri,
+        uint256 role,
         uint256 credits
     ) private {
         require(
@@ -181,7 +186,12 @@ contract Community is ICommunity {
         bool claimableSW = address(this) == _member
             ? false
             : claimableSkillWallets;
-        skillWallet.create(newMemberAddress, uri, claimableSW);
+        skillWallet.create(
+            newMemberAddress,
+            uri,
+            RoleUtils.Roles(role),
+            claimableSW
+        );
 
         uint256 token = 0;
         if (claimableSkillWallets)
@@ -205,38 +215,6 @@ contract Community is ICommunity {
         activeMembersCount++;
 
         emit MemberAdded(newMemberAddress, token, credits);
-    }
-
-    function join(uint256 skillWalletTokenId, uint256 credits) public override {
-        require(
-            activeMembersCount <= totalMembersAllowed,
-            "No free spots left!"
-        );
-
-        ISkillWallet skillWallet = ISkillWallet(
-            DistributedTown(distributedTownAddr).skillWalletAddress()
-        );
-        address skillWalletAddress = skillWallet.ownerOf(skillWalletTokenId);
-
-        require(!isMember(skillWalletAddress), "You have already joined!");
-
-        // require(
-        //     msg.sender == skillWalletAddress,
-        //     "Only the skill wallet owner can call this function"
-        // );
-
-        skillWalletIds[activeMembersCount] = skillWalletTokenId;
-        // skillWalletIds[1] = 123;
-        activeMembersCount++;
-
-        DITOCredit(ditoCreditsAddr).addToWhitelist(skillWalletAddress);
-        DITOCredit(ditoCreditsAddr).transfer(skillWalletAddress, credits);
-
-        emit MemberAdded(skillWalletAddress, skillWalletTokenId, credits);
-    }
-
-    function leave(address memberAddress) public override {
-        emit MemberLeft(memberAddress);
     }
 
     function getMembers() public view override returns (uint256[] memory) {
