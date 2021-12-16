@@ -2,6 +2,7 @@ const { expectEvent, singletons, constants } = require('@openzeppelin/test-helpe
 const { assert } = require('chai');
 const truffleAssert = require('truffle-assertions');
 const { upgrades, ethers } = require('hardhat');
+const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants');
 
 var BN = web3.utils.BN;
 
@@ -12,6 +13,9 @@ let community;
 let community2;
 let gigs;
 let ditoCreditCommunityHolder;
+let communityRoles3;
+let communityRoles2
+let addressProvder;
 
 contract('Community', function (accounts) {
 
@@ -38,7 +42,7 @@ contract('Community', function (accounts) {
             }
         });
 
-        const addressProvder = await AddressProvider.deploy();
+        addressProvder = await AddressProvider.deploy();
         const communityFactory = await CommunityFactory.deploy([1]);
         await addressProvder.deployed();
 
@@ -155,5 +159,74 @@ contract('Community', function (accounts) {
             assert.equal(isMember, true);
             expect(skillWalletIds[2].toString()).to.eq(tokenId.toString());
         });
-    });
+        it("Should create community with 10 members and 3 roles and calclulate role limits", async () => {
+            const Community = await ethers.getContractFactory('Community');
+
+            communityRoles3 = await Community.deploy(
+                distributedTown.address,
+                true,
+                "",
+                addressProvder.address,
+                10,
+                3,
+                false,
+                ZERO_ADDRESS,
+                1
+            );
+
+            expect(await communityRoles3.roleMembershipsLeft(1)).to.equal("5"); //1 less since dito is the first member
+            expect(await communityRoles3.roleMembershipsLeft(2)).to.equal("3");
+            expect(await communityRoles3.roleMembershipsLeft(3)).to.equal("1");
+        });
+        it("Should create community with 20 members and 2 roles", async () => {
+            const Community = await ethers.getContractFactory('Community');
+
+            communityRoles2 = await Community.deploy(
+                distributedTown.address,
+                true,
+                "",
+                addressProvder.address,
+                20,
+                2,
+                false,
+                ZERO_ADDRESS,
+                1
+            );
+
+            expect(await communityRoles2.roleMembershipsLeft(1)).to.equal("11"); //1 less since dito is the first member
+            expect(await communityRoles2.roleMembershipsLeft(2)).to.equal("8");
+            expect(await communityRoles2.roleMembershipsLeft(3)).to.equal("0");
+        });
+        it("Should add a member with role 3 to community with 3 roles", async () => {
+            await communityRoles3.connect(accounts[1]).joinNewMember('http://someuri.co',3,0);
+
+            expect(await communityRoles3.roleMembershipsLeft(3)).to.equal("0");
+        });
+        it("Should not allow new members with role 3 (as only 1 is allowed)", async () => {
+            await expect(communityRoles3.connect(accounts[2]).joinNewMember('http://someuri.co',3,0)).to.be.revertedWith("All role positions are taken");
+        });
+        it("Should add 5 member with role 1 to community with 3 roles", async () => {
+            await communityRoles3.connect(accounts[13]).joinNewMember('http://someuri.co',1,0);
+            await communityRoles3.connect(accounts[4]).joinNewMember('http://someuri.co',1,0);
+            await communityRoles3.connect(accounts[5]).joinNewMember('http://someuri.co',1,0);
+            await communityRoles3.connect(accounts[14]).joinNewMember('http://someuri.co',1,0);
+            await communityRoles3.connect(accounts[7]).joinNewMember('http://someuri.co',1,0);
+
+            expect(await communityRoles3.roleMembershipsLeft(1)).to.equal("0");
+        });
+        it("Should not allow new members with role 1 (as limit is reached)", async () => {
+            await expect(communityRoles3.connect(accounts[8]).joinNewMember('http://someuri.co',1,0)).to.be.revertedWith("All role positions are taken");
+        });
+        it("Should add 5 member with role 2 to community with 3 roles", async () => {
+            await communityRoles3.connect(accounts[9]).joinNewMember('http://someuri.co',2,0);
+            await communityRoles3.connect(accounts[10]).joinNewMember('http://someuri.co',2,0);
+            await communityRoles3.connect(accounts[11]).joinNewMember('http://someuri.co',2,0);
+
+
+            expect(await communityRoles3.roleMembershipsLeft(2)).to.equal("0");
+        });
+        it("Should not allow new members with role 1 (as limit is reached)", async () => {
+            await expect(communityRoles3.connect(accounts[12]).joinNewMember('http://someuri.co',2,0)).to.be.revertedWith("All role positions are taken");
+        });
+    });    
 });

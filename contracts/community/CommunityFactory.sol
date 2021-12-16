@@ -17,11 +17,12 @@ contract CommunityFactory {
         string memory communityMetadata, 
         address addressProvider, 
         uint256 membersCount,
+        uint256 rolesCount,
         bool _claimableSkillWallets,
         address _migrateFrom
     ) public returns (address) {
         address comAddr = address(
-            new Community(msg.sender, _isDitoNative, communityMetadata, addressProvider, membersCount, _claimableSkillWallets, _migrateFrom, version)
+            new Community(msg.sender, _isDitoNative, communityMetadata, addressProvider, membersCount, rolesCount, _claimableSkillWallets, _migrateFrom, version)
         );
 
         return comAddr;
