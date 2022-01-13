@@ -21,6 +21,7 @@ interface IDistributedTown {
         string calldata communityMetadata,
         uint256 template,
         uint totalMembersAllowed,
+        uint256 rolesCount,
         address owner
     ) external;
 

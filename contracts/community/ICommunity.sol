@@ -2,6 +2,8 @@
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
+import "skill-wallet/contracts/main/utils/RoleUtils.sol";
+
 /**
  * @title DistributedTown Community
  *
@@ -29,6 +31,9 @@ interface ICommunity {
         uint256 role,
         uint256 credits
     ) external;
+
+    //function rolesCount() external view returns (uint256);
+    //function roleMembershiftsLeft(RoleUtils.Roles) external view returns (uint256);
 
     function getMembers() external view returns (uint256[] memory);
     
