@@ -28,9 +28,8 @@ interface ICommunity {
     // check if it's called only from deployer.
     function joinNewMember(
         string memory uri,
-        uint256 role,
-        uint256 credits
-    ) external;
+        uint256 role
+        ) external;
 
     //function rolesCount() external view returns (uint256);
     //function roleMembershiftsLeft(RoleUtils.Roles) external view returns (uint256);

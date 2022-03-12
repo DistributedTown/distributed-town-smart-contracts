@@ -145,8 +145,8 @@ contract MockCommunityV2 is ICommunity {
         status = STATUS.MIGRATED;
     }
 
-    function joinNewMember(string memory uri, uint role, uint256 credits) public override {
-        _joinNewMember(msg.sender, uri, role, credits);
+    function joinNewMember(string memory uri, uint role) public override {
+        _joinNewMember(msg.sender, uri, role, 0);
     }
 
     // check if it's called only from deployer.

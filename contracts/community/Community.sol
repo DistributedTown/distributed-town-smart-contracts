@@ -51,7 +51,7 @@ contract Community is ICommunity {
     uint256[] public projectIds;
     uint256 public totalMembersAllowed;
     uint256 public rolesCount;
-    mapping (RoleUtils.Roles => uint256) public roleMembershipsLeft;
+    mapping(RoleUtils.Roles => uint256) public roleMembershipsLeft;
     bool public claimableSkillWallets;
 
     // add JSON Schema base URL
@@ -71,7 +71,10 @@ contract Community is ICommunity {
                 _rolesCount == 2 || _rolesCount == 3,
                 "Only 2 or 3 roles accepted"
             );
-            require(_totalMembersAllowed >= _rolesCount, "Total members are less than roles"); 
+            require(
+                _totalMembersAllowed >= _rolesCount,
+                "Total members are less than roles"
+            );
 
             metadataUri = _url;
             distributedTownAddr = _distributedTownAddr;
@@ -86,25 +89,28 @@ contract Community is ICommunity {
                 ditoCreditsAddr
             );
             gigsAddr = GigsFactory(provider.gigsFactory()).deploy();
-            
+
             totalMembersAllowed = _totalMembersAllowed;
             rolesCount = _rolesCount;
             uint256 totalroleMemberships = 0;
             uint256[3] memory roleCoefs = RoleUtils.getRolesCoefs(_rolesCount);
             for (uint256 i = 0; i < _rolesCount; i++) {
                 //probably use math lib here or have limit for max totalMembersAllowed
-                uint256 roleMemberships = _totalMembersAllowed * roleCoefs[i] / 100;
+                uint256 roleMemberships = (_totalMembersAllowed *
+                    roleCoefs[i]) / 100;
                 if (roleMemberships == 0) roleMemberships = 1;
                 roleMembershipsLeft[RoleUtils.Roles(i + 1)] = roleMemberships;
                 totalroleMemberships += roleMemberships;
             }
 
-            uint256 leftoverMemberships = _totalMembersAllowed - totalroleMemberships;
+            uint256 leftoverMemberships = _totalMembersAllowed -
+                totalroleMemberships;
             if (leftoverMemberships > 0) {
                 roleMembershipsLeft[RoleUtils.Roles.ROLE1]++;
-                if (leftoverMemberships == 2) roleMembershipsLeft[RoleUtils.Roles.ROLE2]++;
+                if (leftoverMemberships == 2)
+                    roleMembershipsLeft[RoleUtils.Roles.ROLE2]++;
             }
-            
+
             claimableSkillWallets = _claimableSkillWallets;
 
             if (_isDitoNative) {
@@ -133,9 +139,13 @@ contract Community is ICommunity {
             creditsToTransfer = currentCommunity.creditsToTransfer();
 
             rolesCount = currentCommunity.rolesCount();
-            roleMembershipsLeft[RoleUtils.Roles(1)] = currentCommunity.roleMembershipsLeft(RoleUtils.Roles(1));
-            roleMembershipsLeft[RoleUtils.Roles(2)] = currentCommunity.roleMembershipsLeft(RoleUtils.Roles(2));
-            if (rolesCount == 3) roleMembershipsLeft[RoleUtils.Roles(3)] = currentCommunity.roleMembershipsLeft(RoleUtils.Roles(3));
+            roleMembershipsLeft[RoleUtils.Roles(1)] = currentCommunity
+                .roleMembershipsLeft(RoleUtils.Roles(1));
+            roleMembershipsLeft[RoleUtils.Roles(2)] = currentCommunity
+                .roleMembershipsLeft(RoleUtils.Roles(2));
+            if (rolesCount == 3)
+                roleMembershipsLeft[RoleUtils.Roles(3)] = currentCommunity
+                    .roleMembershipsLeft(RoleUtils.Roles(3));
 
             status = STATUS.IN_PROGRESS;
             migratedFrom = _migrateFrom;
@@ -181,15 +191,8 @@ contract Community is ICommunity {
         status = STATUS.MIGRATED;
     }
 
-    function joinNewMember(
-        string memory uri,
-        uint256 role,
-        uint256 credits
-    ) public override {
-        if (creditsToTransfer == 0) {
-            credits = 0;
-        }
-        _joinNewMember(msg.sender, uri, role, credits);
+    function joinNewMember(string memory uri, uint256 role) public override {
+        _joinNewMember(msg.sender, uri, role, 0);
     }
 
     // check if it's called only from deployer.
@@ -204,7 +207,10 @@ contract Community is ICommunity {
             "No free spots left!"
         );
 
-        require(roleMembershipsLeft[RoleUtils.Roles(role)] > 0, "All role positions are taken");
+        require(
+            roleMembershipsLeft[RoleUtils.Roles(role)] > 0,
+            "All role positions are taken"
+        );
 
         require(!isMember(_member), "Already a member");
 
