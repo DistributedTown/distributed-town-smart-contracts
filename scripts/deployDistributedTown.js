@@ -10,7 +10,7 @@ const main = async () => {
     const gigStatuses = await GigStatuses.deploy();
     await gigStatuses.deployed();
     console.log('gigStatusesAddress', gigStatuses.address)
-    const skillWalletAddress = '0x044F5A0F1fEE8cEa95Da4574de375A4Ea1DF39EF';
+    const skillWalletAddress = '0xdC8fDfBdddcce3b8DfFc345Bd426789a7b2534A1';
 
     const addressProvider = await deploy('AddressProvider', [], {},
     {
@@ -35,8 +35,8 @@ const main = async () => {
     await distributedTown.deployed();
 
     const a = await distributedTown.deployGenesisCommunities(0);
-    // await distributedTown.deployGenesisCommunities(1);
-    // await distributedTown.deployGenesisCommunities(2);
+    await distributedTown.deployGenesisCommunities(1);
+    await distributedTown.deployGenesisCommunities(2);
     console.log(await a.wait());
     console.log(a);
 
